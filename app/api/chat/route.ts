@@ -3,6 +3,8 @@ import { generateEmbedding } from "@/lib/embeddings";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { supabase as adminSupabase } from "@/lib/supabase";
 import { evaluateRetrieval } from "@/lib/rag-evaluation";
+import { checkGuardrails } from "@/lib/guardrails";
+import { generateMockResponse } from "@/lib/mock-ai";
 
 export async function POST(request: Request) {
   try {
@@ -98,6 +100,26 @@ export async function POST(request: Request) {
     // Get latest message
     // --------------------------------
     const latestMessage = messages[messages.length - 1];
+
+    const guardrailResult = checkGuardrails(
+  latestMessage.content,
+);
+
+if (!guardrailResult.allowed) {
+  return new Response(
+    JSON.stringify({
+      error:
+        guardrailResult.message ??
+        "This question cannot be processed.",
+    }),
+    {
+      status: 400,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+}
 
     if (latestMessage?.role !== "user") {
       return new Response(
@@ -224,11 +246,15 @@ export async function POST(request: Request) {
     );
 
     const relevantResults = evaluatedResults.filter(
-      (result: { evaluation: { relevance: string } }) =>
-        result.evaluation.relevance !== "low",
-    );
+  (result: { evaluation: { relevance: string } }) =>
+    result.evaluation.relevance === "high" ||
+    result.evaluation.relevance === "medium",
+);
 
-    console.log("Relevant RAG results:", relevantResults.length);
+console.log(
+  "Usable RAG results:",
+  relevantResults.length,
+);
 
     // --------------------------------
 // Save RAG evaluation
@@ -261,18 +287,22 @@ if (evaluationError) {
     // Build retrieved context
     // --------------------------------
     const knowledgeContext =
-      relevantResults.length > 0
-        ? relevantResults
-            .map(
-              (
-                result: {
-                  content: string;
-                  metadata: Record<string, unknown>;
-                  similarity: number;
-                },
-                index: number,
-              ) => {
-                return `
+  relevantResults.length > 0
+    ? relevantResults
+        .map(
+          (
+            result: {
+              content: string;
+              metadata: Record<string, unknown>;
+              similarity: number;
+              evaluation: {
+                score: number;
+                relevance: "high" | "medium" | "low";
+              };
+            },
+            index: number,
+          ) => {
+            return `
 Knowledge ${index + 1}:
 ${result.content}
 
@@ -281,12 +311,14 @@ ${JSON.stringify(result.metadata)}
 
 Similarity:
 ${result.similarity}
-`;
-              },
-            )
-            .join("\n")
-        : "No relevant knowledge was found.";
 
+Relevance:
+${result.evaluation.relevance}
+`;
+          },
+        )
+        .join("\n")
+    : "No relevant knowledge was found.";
     // --------------------------------
     // Build conversation
     // --------------------------------
@@ -320,6 +352,11 @@ Rules:
 - Do not invent facts that contradict the provided knowledge.
 - If the provided knowledge does not contain the answer, use your general knowledge and clearly explain the answer.
 - Never mention "RAG", "vector search", "embeddings", or internal systems to the student.
+- Retrieved knowledge may have different confidence levels.
+- Use high-relevance knowledge confidently.
+- Use medium-relevance knowledge cautiously and do not present uncertain information as a confirmed fact.
+- Ignore low-relevance knowledge.
+- If retrieved knowledge is insufficient, use general knowledge and clearly explain uncertainty when appropriate.
 
 Retrieved Educational Knowledge:
 
@@ -333,6 +370,58 @@ Respond as EduMate.
 `;
 
     console.log("Retrieved knowledge:", knowledgeContext);
+
+    if (process.env.MOCK_AI === "true") {
+  const mockResponse = generateMockResponse(
+    latestMessage.content,
+    knowledgeContext,
+  );
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(
+        encoder.encode(mockResponse),
+      );
+
+      controller.close();
+    },
+  });
+
+  // Save assistant message
+  const { error: mockSaveError } =
+    await adminSupabase
+      .from("messages")
+      .insert({
+        conversation_id: conversationId,
+        user_id: user.id,
+        role: "assistant",
+        content: mockResponse,
+      });
+
+  if (mockSaveError) {
+    console.error(
+      "Failed to save mock assistant message:",
+      mockSaveError,
+    );
+  }
+
+  await adminSupabase
+    .from("conversations")
+    .update({
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", conversationId)
+    .eq("user_id", user.id);
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Transfer-Encoding": "chunked",
+    },
+  });
+}
 
     // --------------------------------
     // Generate Gemini streaming response
