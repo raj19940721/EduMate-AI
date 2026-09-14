@@ -134,19 +134,17 @@ export async function POST(request: Request) {
     );
 
     // 7. Accept HIGH + MEDIUM results
-    const relevantResults =
-      evaluatedResults.filter(
-        (result: any) =>
-          result.evaluation.relevance ===
-            "high" ||
-          result.evaluation.relevance ===
-            "medium",
-      );
+    // 7. Accept only HIGH-confidence results for answering
+const relevantResults =
+  evaluatedResults.filter(
+    (result: any) =>
+      result.evaluation.relevance === "high",
+  );
 
-    console.log(
-      "Mock RAG usable results:",
-      relevantResults.length,
-    );
+console.log(
+  "Mock RAG usable results:",
+  relevantResults.length,
+);
 
     // 8. Build knowledge context
     const knowledgeContext =

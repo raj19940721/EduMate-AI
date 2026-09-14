@@ -5,6 +5,7 @@ import ChatWindow from "@/components/chat/ChatWindow";
 import ChatInput from "@/components/chat/ChatInput";
 import ConversationSidebar from "@/components/chat/ConversationSidebar";
 import type { Message, StudentProfile } from "@/types";
+import QuizCard from "@/components/chat/QuizCard";
 
 interface Conversation {
   id: string;
@@ -499,6 +500,11 @@ export default function ChatPage() {
             messages={messages}
             loading={loading}
           />
+        </div>
+
+        {/* Quiz */}
+        <div className="border-t bg-white px-6 py-4">
+          <QuizCard />
         </div>
 
         {/* Chat input */}
