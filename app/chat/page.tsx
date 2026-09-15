@@ -6,6 +6,8 @@ import ChatInput from "@/components/chat/ChatInput";
 import ConversationSidebar from "@/components/chat/ConversationSidebar";
 import type { Message, StudentProfile } from "@/types";
 import QuizCard from "@/components/chat/QuizCard";
+import LearningRecommendation from "@/components/chat/LearningRecommendation";
+import SmartReview from "@/components/chat/SmartReview";
 
 interface Conversation {
   id: string;
@@ -15,19 +17,15 @@ interface Conversation {
 }
 
 export default function ChatPage() {
-  const [student, setStudent] =
-    useState<StudentProfile | null>(null);
+  const [student, setStudent] = useState<StudentProfile | null>(null);
 
   const [question, setQuestion] = useState("");
 
-  const [messages, setMessages] =
-    useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
 
-  const [conversations, setConversations] =
-    useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
-  const [conversationId, setConversationId] =
-    useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
 
@@ -38,37 +36,28 @@ export default function ChatPage() {
         // --------------------------------
         // 1. Load student
         // --------------------------------
-        const studentResponse =
-          await fetch("/api/student");
+        const studentResponse = await fetch("/api/student");
 
         if (!studentResponse.ok) {
-          throw new Error(
-            "Failed to load student",
-          );
+          throw new Error("Failed to load student");
         }
 
-        const studentData =
-          await studentResponse.json();
+        const studentData = await studentResponse.json();
 
         setStudent(studentData.student);
 
         // --------------------------------
         // 2. Load all conversations
         // --------------------------------
-        const conversationsResponse =
-          await fetch("/api/conversation");
+        const conversationsResponse = await fetch("/api/conversation");
 
         if (!conversationsResponse.ok) {
-          throw new Error(
-            "Failed to load conversations",
-          );
+          throw new Error("Failed to load conversations");
         }
 
-        const conversationsData =
-          await conversationsResponse.json();
+        const conversationsData = await conversationsResponse.json();
 
-        const loadedConversations =
-          conversationsData.conversations ?? [];
+        const loadedConversations = conversationsData.conversations ?? [];
 
         setConversations(loadedConversations);
 
@@ -79,46 +68,30 @@ export default function ChatPage() {
           return;
         }
 
-        const currentConversation =
-          loadedConversations[0];
+        const currentConversation = loadedConversations[0];
 
-        const currentConversationId =
-          currentConversation.id;
+        const currentConversationId = currentConversation.id;
 
-        setConversationId(
-          currentConversationId,
-        );
+        setConversationId(currentConversationId);
 
-        console.log(
-          "Conversation ID:",
-          currentConversationId,
-        );
+        console.log("Conversation ID:", currentConversationId);
 
         // --------------------------------
         // 4. Load messages
         // --------------------------------
-        const messagesResponse =
-          await fetch(
-            `/api/messages?conversationId=${currentConversationId}`,
-          );
+        const messagesResponse = await fetch(
+          `/api/messages?conversationId=${currentConversationId}`,
+        );
 
         if (!messagesResponse.ok) {
-          throw new Error(
-            "Failed to load messages",
-          );
+          throw new Error("Failed to load messages");
         }
 
-        const messagesData =
-          await messagesResponse.json();
+        const messagesData = await messagesResponse.json();
 
-        setMessages(
-          messagesData.messages ?? [],
-        );
+        setMessages(messagesData.messages ?? []);
       } catch (error) {
-        console.error(
-          "Failed to load chat data:",
-          error,
-        );
+        console.error("Failed to load chat data:", error);
       }
     };
 
@@ -130,35 +103,23 @@ export default function ChatPage() {
   // --------------------------------
   const handleNewChat = async () => {
     try {
-      const response = await fetch(
-        "/api/conversation",
-        {
-          method: "POST",
-        },
-      );
+      const response = await fetch("/api/conversation", {
+        method: "POST",
+      });
 
       if (!response.ok) {
-        throw new Error(
-          "Failed to create conversation",
-        );
+        throw new Error("Failed to create conversation");
       }
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      const newConversation =
-        data.conversation;
+      const newConversation = data.conversation;
 
       // Add new conversation to sidebar
-      setConversations((previous) => [
-        newConversation,
-        ...previous,
-      ]);
+      setConversations((previous) => [newConversation, ...previous]);
 
       // Make it active
-      setConversationId(
-        newConversation.id,
-      );
+      setConversationId(newConversation.id);
 
       // Clear current messages
       setMessages([]);
@@ -166,89 +127,62 @@ export default function ChatPage() {
       // Clear input
       setQuestion("");
     } catch (error) {
-      console.error(
-        "New chat error:",
-        error,
-      );
+      console.error("New chat error:", error);
     }
   };
 
   // --------------------------------
   // Select existing conversation
   // --------------------------------
-  const handleSelectConversation =
-    async (
-      selectedConversationId: string,
-    ) => {
-      try {
-        setConversationId(
-          selectedConversationId,
-        );
+  const handleSelectConversation = async (selectedConversationId: string) => {
+    try {
+      setConversationId(selectedConversationId);
 
-        setLoading(true);
+      setLoading(true);
 
-        const response =
-          await fetch(
-            `/api/messages?conversationId=${selectedConversationId}`,
-          );
+      const response = await fetch(
+        `/api/messages?conversationId=${selectedConversationId}`,
+      );
 
-        if (!response.ok) {
-          throw new Error(
-            "Failed to load conversation messages",
-          );
-        }
-
-        const data =
-          await response.json();
-
-        setMessages(data.messages ?? []);
-
-        // Clear input when switching chat
-        setQuestion("");
-      } catch (error) {
-        console.error(
-          "Conversation selection error:",
-          error,
-        );
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error("Failed to load conversation messages");
       }
-    };
+
+      const data = await response.json();
+
+      setMessages(data.messages ?? []);
+
+      // Clear input when switching chat
+      setQuestion("");
+    } catch (error) {
+      console.error("Conversation selection error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // --------------------------------
   // Send message
   // --------------------------------
-  const handleSubmit = async (
-    e: React.FormEvent,
-  ) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !student ||
-      !conversationId
-    ) {
+    if (!student || !conversationId) {
       return;
     }
 
-    if (
-      !question.trim() ||
-      loading
-    ) {
+    if (!question.trim() || loading) {
       return;
     }
 
-    const currentQuestion =
-      question.trim();
+    const currentQuestion = question.trim();
 
     const userMessage: Message = {
       role: "user",
       content: currentQuestion,
     };
 
-    const updatedMessages = [
-      ...messages,
-      userMessage,
-    ];
+    const updatedMessages = [...messages, userMessage];
 
     // Show user message + empty assistant message
     setMessages([
@@ -263,58 +197,42 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "/api/chat",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            messages: updatedMessages,
-            student,
-            conversationId,
-          }),
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({
+          messages: updatedMessages,
+          student,
+          conversationId,
+        }),
+      });
 
       if (!response.ok) {
-        const errorData =
-          await response.json();
+        const errorData = await response.json();
 
-        throw new Error(
-          errorData.error ||
-            "Something went wrong",
-        );
+        throw new Error(errorData.error || "Something went wrong");
       }
 
       if (!response.body) {
-        throw new Error(
-          "Response body is empty",
-        );
+        throw new Error("Response body is empty");
       }
 
-      const reader =
-        response.body.getReader();
+      const reader = response.body.getReader();
 
-      const decoder =
-        new TextDecoder();
+      const decoder = new TextDecoder();
 
       let assistantText = "";
 
       while (true) {
-        const {
-          done,
-          value,
-        } = await reader.read();
+        const { done, value } = await reader.read();
 
         if (done) break;
 
-        const chunk =
-          decoder.decode(value, {
-            stream: true,
-          });
+        const chunk = decoder.decode(value, {
+          stream: true,
+        });
 
         assistantText += chunk;
 
@@ -322,27 +240,19 @@ export default function ChatPage() {
           ...updatedMessages,
           {
             role: "assistant",
-            content:
-              assistantText,
+            content: assistantText,
           },
         ]);
       }
 
       // Refresh conversation list
       // so updated_at ordering stays current
-      const conversationsResponse =
-        await fetch(
-          "/api/conversation",
-        );
+      const conversationsResponse = await fetch("/api/conversation");
 
       if (conversationsResponse.ok) {
-        const conversationsData =
-          await conversationsResponse.json();
+        const conversationsData = await conversationsResponse.json();
 
-        setConversations(
-          conversationsData.conversations ??
-            [],
-        );
+        setConversations(conversationsData.conversations ?? []);
       }
     } catch (error) {
       console.error(error);
@@ -351,8 +261,7 @@ export default function ChatPage() {
         ...updatedMessages,
         {
           role: "assistant",
-          content:
-            "Sorry, I couldn't answer that question.",
+          content: "Sorry, I couldn't answer that question.",
         },
       ]);
     } finally {
@@ -360,91 +269,59 @@ export default function ChatPage() {
     }
   };
 
-  const handleDeleteConversation =
-  async (
-    conversationToDeleteId: string,
-  ) => {
+  const handleDeleteConversation = async (conversationToDeleteId: string) => {
     try {
-      const response =
-        await fetch(
-          `/api/conversation?conversationId=${conversationToDeleteId}`,
-          {
-            method: "DELETE",
-          },
-        );
+      const response = await fetch(
+        `/api/conversation?conversationId=${conversationToDeleteId}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (!response.ok) {
-        const data =
-          await response.json();
+        const data = await response.json();
 
-        throw new Error(
-          data.error ||
-            "Failed to delete conversation",
-        );
+        throw new Error(data.error || "Failed to delete conversation");
       }
 
       // Remove from sidebar
-      setConversations(
-        (previous) =>
-          previous.filter(
-            (conversation) =>
-              conversation.id !==
-              conversationToDeleteId,
-          ),
+      setConversations((previous) =>
+        previous.filter(
+          (conversation) => conversation.id !== conversationToDeleteId,
+        ),
       );
 
       // If deleting active conversation
-      if (
-        conversationId ===
-        conversationToDeleteId
-      ) {
+      if (conversationId === conversationToDeleteId) {
         setMessages([]);
 
         // Find another conversation
-        const remaining =
-          conversations.filter(
-            (conversation) =>
-              conversation.id !==
-              conversationToDeleteId,
-          );
+        const remaining = conversations.filter(
+          (conversation) => conversation.id !== conversationToDeleteId,
+        );
 
         if (remaining.length > 0) {
-          await handleSelectConversation(
-            remaining[0].id,
-          );
+          await handleSelectConversation(remaining[0].id);
         } else {
           // No conversations left
-          const response =
-            await fetch(
-              "/api/conversation",
-              {
-                method: "POST",
-              },
-            );
+          const response = await fetch("/api/conversation", {
+            method: "POST",
+          });
 
           if (response.ok) {
-            const data =
-              await response.json();
+            const data = await response.json();
 
-            const newConversation =
-              data.conversation;
+            const newConversation = data.conversation;
 
-            setConversations([
-              newConversation,
-            ]);
+            setConversations([newConversation]);
 
-            setConversationId(
-              newConversation.id,
-            );
+            setConversationId(newConversation.id);
             setMessages([]);
           }
         }
       }
     } catch (error) {
-      console.error(
-        "Delete conversation error:",
-        error,
-      );
+      console.error("Delete conversation error:", error);
     }
   };
   return (
@@ -455,16 +332,10 @@ export default function ChatPage() {
 
       <ConversationSidebar
         conversations={conversations}
-        activeConversationId={
-          conversationId
-        }
+        activeConversationId={conversationId}
         onNewChat={handleNewChat}
-        onSelectConversation={
-          handleSelectConversation
-        }
-        onDeleteConversation={
-          handleDeleteConversation
-        }
+        onSelectConversation={handleSelectConversation}
+        onDeleteConversation={handleDeleteConversation}
       />
 
       {/* -------------------------------- */}
@@ -476,13 +347,10 @@ export default function ChatPage() {
         <header className="border-b bg-white px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">
-                EduMate AI
-              </h1>
+              <h1 className="text-2xl font-bold">EduMate AI</h1>
 
               <p className="text-sm text-gray-500">
-                Your friendly AI learning
-                companion
+                Your friendly AI learning companion
               </p>
             </div>
 
@@ -495,25 +363,28 @@ export default function ChatPage() {
         </header>
 
         {/* Chat messages */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <ChatWindow
-            messages={messages}
-            loading={loading}
-          />
+        <div className="min-h-[250px] flex-1 overflow-y-auto">
+          <ChatWindow messages={messages} loading={loading} />
         </div>
 
-        {/* Quiz */}
-        <div className="border-t bg-white px-6 py-4">
-          <QuizCard />
+        {/* Learning Features */}
+        <div className="shrink-0 overflow-y-auto">
+          <SmartReview />
+
+          <LearningRecommendation />
+
+
+          {/* Quiz */}
+          <div className="border-t bg-white px-6 py-4">
+            <QuizCard />
+          </div>
         </div>
 
         {/* Chat input */}
         <ChatInput
           question={question}
           loading={loading}
-          onQuestionChange={
-            setQuestion
-          }
+          onQuestionChange={setQuestion}
           onSubmit={handleSubmit}
         />
       </section>

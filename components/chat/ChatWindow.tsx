@@ -1,14 +1,19 @@
 import MessageBubble from "./MessageBubble";
+import HomeworkHelper from "./HomeworkHelper";
 import type { Message } from "@/types";
+import VoiceTutor from "./VoiceTutor";
 
 interface ChatWindowProps {
   messages: Message[];
   loading: boolean;
 }
 
-export default function ChatWindow({ messages, loading }: ChatWindowProps) {
+export default function ChatWindow({
+  messages,
+  loading,
+}: ChatWindowProps) {
   return (
-    <div className="flex-1 space-y-4 overflow-y-auto p-6">
+    <div className="flex min-h-full flex-col space-y-4 overflow-y-auto p-6">
       {messages.length === 0 && (
         <div className="flex justify-start">
           <div className="max-w-xl rounded-2xl bg-white p-4 shadow-sm">
@@ -36,6 +41,10 @@ export default function ChatWindow({ messages, loading }: ChatWindowProps) {
           </div>
         </div>
       )}
+      <VoiceTutor />
+
+      {/* Homework Helper */}
+      <HomeworkHelper />
     </div>
   );
 }
