@@ -108,8 +108,8 @@ export default function QuizCard() {
   // Generate quiz
   // --------------------------------------------------
 
-  const generateQuiz = async () => {
-    if (!selectedTopic) {
+  const generateQuizForTopic = async (topic: string) => {
+    if (!topic) {
       setError("Please select a learning topic first.");
       return;
     }
@@ -128,9 +128,7 @@ export default function QuizCard() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          topic: selectedTopic,
-        }),
+        body: JSON.stringify({ topic }),
       });
 
       const data = await response.json();
@@ -142,14 +140,46 @@ export default function QuizCard() {
       setQuiz(data.quiz);
     } catch (error) {
       console.error("Quiz generation error:", error);
-
-      setError(
-        error instanceof Error ? error.message : "Failed to generate quiz",
-      );
+      setError(error instanceof Error ? error.message : "Failed to generate quiz");
     } finally {
       setLoading(false);
     }
   };
+
+  const generateQuiz = async () => {
+    if (!selectedTopic) {
+      setError("Please select a learning topic first.");
+      return;
+    }
+
+    await generateQuizForTopic(selectedTopic);
+  };
+
+  // Study Plan → Quiz integration
+  useEffect(() => {
+    const handleStudyPlanQuiz = (event: Event) => {
+      const customEvent = event as CustomEvent<{ topic?: string; studyPlanId?: string }>;
+      const topic = customEvent.detail?.topic?.trim();
+      if (!topic) return;
+
+      console.log("Study Plan quiz activity received:", customEvent.detail);
+
+      setOpen(true);
+      setSelectedTopic(topic);
+      setQuiz(null);
+      setResult(null);
+      setPerformance(null);
+      setDailyGoal(null);
+      setNewAchievements([]);
+      setAnswer("");
+      setError("");
+
+      generateQuizForTopic(topic);
+    };
+
+    window.addEventListener("edumate:start-quiz", handleStudyPlanQuiz);
+    return () => window.removeEventListener("edumate:start-quiz", handleStudyPlanQuiz);
+  }, []);
 
   // --------------------------------------------------
   // Submit answer
@@ -187,6 +217,13 @@ export default function QuizCard() {
       setResult(data.result);
       setPerformance(data.performance ?? null);
       setDailyGoal(data.dailyGoal ?? null);
+
+      // Study Plan → mark quiz activity completed
+      window.dispatchEvent(
+        new CustomEvent("edumate:quiz-completed", {
+          detail: { topic: quiz.topic },
+        }),
+      );
 
       // ----------------------------------------------
       // Newly earned achievements

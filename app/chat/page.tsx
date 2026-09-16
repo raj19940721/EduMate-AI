@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import ChatWindow from "@/components/chat/ChatWindow";
 import ChatInput from "@/components/chat/ChatInput";
 import ConversationSidebar from "@/components/chat/ConversationSidebar";
@@ -8,6 +8,7 @@ import type { Message, StudentProfile } from "@/types";
 import QuizCard from "@/components/chat/QuizCard";
 import LearningRecommendation from "@/components/chat/LearningRecommendation";
 import SmartReview from "@/components/chat/SmartReview";
+import StudyPlan from "@/components/chat/StudyPlan";
 
 interface Conversation {
   id: string;
@@ -164,18 +165,16 @@ export default function ChatPage() {
   // --------------------------------
   // Send message
   // --------------------------------
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const sendMessage = async (messageText: string) => {
     if (!student || !conversationId) {
       return;
     }
 
-    if (!question.trim() || loading) {
+    const currentQuestion = messageText.trim();
+
+    if (!currentQuestion || loading) {
       return;
     }
-
-    const currentQuestion = question.trim();
 
     const userMessage: Message = {
       role: "user",
@@ -269,6 +268,109 @@ export default function ChatPage() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!question.trim() || loading) {
+      return;
+    }
+
+    await sendMessage(question);
+  };
+
+  // --------------------------------
+  // Study Plan → Practice / AI Tutor
+  // --------------------------------
+  useEffect(() => {
+    const handlePracticeStart = async (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        topic?: string;
+        studyPlanId?: string;
+      }>;
+
+      const topic = customEvent.detail?.topic?.trim();
+
+      if (!topic) {
+        return;
+      }
+
+      const practicePrompt =
+        `Let's practice ${topic}. ` +
+        `Please help me practice this topic with simple, age-appropriate questions and examples. ` +
+        `Ask me one question at a time and wait for my answer before continuing.`;
+
+      console.log("Starting Study Plan practice:", {
+        topic,
+        studyPlanId: customEvent.detail?.studyPlanId,
+      });
+
+      setQuestion("");
+
+      window.setTimeout(() => {
+        void sendMessage(practicePrompt);
+      }, 0);
+    };
+
+    window.addEventListener(
+      "edumate:start-practice",
+      handlePracticeStart,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "edumate:start-practice",
+        handlePracticeStart,
+      );
+    };
+  }, [student, conversationId, messages, loading]);
+
+  // --------------------------------
+  // Study Plan → Review / AI Tutor
+  // --------------------------------
+  useEffect(() => {
+    const handleReviewStart = async (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        topic?: string;
+        studyPlanId?: string;
+      }>;
+
+      const topic = customEvent.detail?.topic?.trim();
+
+      if (!topic) {
+        return;
+      }
+
+      const reviewPrompt =
+        `Let's review ${topic}. ` +
+        `Give me a simple, age-appropriate review of this topic using the student's learning context and relevant educational knowledge. ` +
+        `Start with the key ideas, then give a few short review questions one at a time and wait for my answer. ` +
+        `Do not make it too difficult.`;
+
+      console.log("Starting Study Plan review:", {
+        topic,
+        studyPlanId: customEvent.detail?.studyPlanId,
+      });
+
+      setQuestion("");
+
+      window.setTimeout(() => {
+        void sendMessage(reviewPrompt);
+      }, 0);
+    };
+
+    window.addEventListener(
+      "edumate:start-review",
+      handleReviewStart,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "edumate:start-review",
+        handleReviewStart,
+      );
+    };
+  }, [student, conversationId, messages, loading]);
+
   const handleDeleteConversation = async (conversationToDeleteId: string) => {
     try {
       const response = await fetch(
@@ -314,7 +416,6 @@ export default function ChatPage() {
             const newConversation = data.conversation;
 
             setConversations([newConversation]);
-
             setConversationId(newConversation.id);
             setMessages([]);
           }
@@ -324,6 +425,7 @@ export default function ChatPage() {
       console.error("Delete conversation error:", error);
     }
   };
+
   return (
     <main className="flex h-screen bg-gray-50">
       {/* -------------------------------- */}
@@ -373,6 +475,7 @@ export default function ChatPage() {
 
           <LearningRecommendation />
 
+          <StudyPlan />
 
           {/* Quiz */}
           <div className="border-t bg-white px-6 py-4">
