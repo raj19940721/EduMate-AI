@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { supabase } from "@/lib/supabase";
 
 type RouteContext = {
   params: Promise<{
@@ -7,110 +8,106 @@ type RouteContext = {
   }>;
 };
 
-// --------------------------------------------------
-// PATCH /api/study-plan/[id]
-// Update study plan activity status
-// --------------------------------------------------
 export async function PATCH(
   request: Request,
   context: RouteContext,
 ) {
   try {
-    const supabase = await createSupabaseServerClient();
+    // ----------------------------------------------
+    // Authenticate user
+    // ----------------------------------------------
 
-    // ----------------------------------------------
-    // 1. Authenticate user
-    // ----------------------------------------------
+    const supabaseServer =
+      await createSupabaseServerClient();
+
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser();
+    } =
+      await supabaseServer.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        },
       );
     }
 
     // ----------------------------------------------
-    // 2. Get plan ID
+    // Get activity ID
     // ----------------------------------------------
+
     const { id } = await context.params;
 
     if (!id) {
       return NextResponse.json(
-        { error: "Study plan ID is required" },
-        { status: 400 },
+        {
+          success: false,
+          error:
+            "Study plan activity ID is required.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
     // ----------------------------------------------
-    // 3. Read request body
+    // Validate request body
     // ----------------------------------------------
-    const body = await request.json().catch(() => null);
 
-    const status =
-      typeof body?.status === "string"
-        ? body.status.trim().toLowerCase()
-        : "";
+    let body: {
+      status?: string;
+    };
 
-    const allowedStatuses = [
-      "pending",
-      "in_progress",
-      "completed",
-    ];
-
-    if (!allowedStatuses.includes(status)) {
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
         {
+          success: false,
           error:
-            "Invalid status. Allowed values: pending, in_progress, completed",
+            "Invalid request body.",
         },
-        { status: 400 },
+        {
+          status: 400,
+        },
       );
     }
 
-    // ----------------------------------------------
-    // 4. Verify plan belongs to current user
-    // ----------------------------------------------
-    const { data: existingPlan, error: findError } =
-      await supabase
-        .from("student_study_plans")
-        .select("*")
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .maybeSingle();
+    const status =
+      body.status?.trim();
 
-    if (findError) {
-      console.error(
-        "Failed to find study plan:",
-        findError,
-      );
-
+    if (
+      status !== "in_progress" &&
+      status !== "completed"
+    ) {
       return NextResponse.json(
-        { error: "Failed to find study plan" },
-        { status: 500 },
-      );
-    }
-
-    if (!existingPlan) {
-      return NextResponse.json(
-        { error: "Study plan item not found" },
-        { status: 404 },
+        {
+          success: false,
+          error:
+            "Invalid study activity status.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
     // ----------------------------------------------
-    // 5. Build update
+    // Prepare update
     // ----------------------------------------------
+
     const updateData: {
       status: string;
       completed_at?: string | null;
-      updated_at: string;
     } = {
       status,
-      updated_at: new Date().toISOString(),
     };
 
     if (status === "completed") {
@@ -121,87 +118,140 @@ export async function PATCH(
     }
 
     // ----------------------------------------------
-    // 6. Update study plan
+    // Update activity
+    //
+    // IMPORTANT:
+    // Use the NEW table:
+    // study_plan_activities
     // ----------------------------------------------
-    const { data: updatedPlan, error: updateError } =
-      await supabase
-        .from("student_study_plans")
-        .update(updateData)
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select("*")
-        .single();
+
+    const {
+      data: updatedActivity,
+      error: updateError,
+    } = await supabase
+      .from(
+        "study_plan_activities",
+      )
+      .update(updateData)
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select(
+        `
+        id,
+        plan_id,
+        activity_date,
+        activity_type,
+        title,
+        description,
+        topic,
+        subject,
+        estimated_minutes,
+        status,
+        completed_at
+        `,
+      )
+      .maybeSingle();
 
     if (updateError) {
       console.error(
-        "Failed to update study plan:",
+        "Study plan activity update error:",
         updateError,
       );
 
       return NextResponse.json(
         {
-          error: "Failed to update study plan",
-          details: updateError.message,
+          success: false,
+          error:
+            "Failed to update study activity.",
         },
-        { status: 500 },
+        {
+          status: 500,
+        },
       );
     }
 
     // ----------------------------------------------
-    // 7. Return updated item
+    // Activity not found
     // ----------------------------------------------
+
+    if (!updatedActivity) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Study plan item not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    // ----------------------------------------------
+    // Return updated activity
+    // ----------------------------------------------
+
     return NextResponse.json({
       success: true,
 
       message:
         status === "completed"
           ? "Study activity completed."
-          : status === "in_progress"
-            ? "Study activity started."
-            : "Study activity reset.",
+          : "Study activity started.",
 
       studyPlan: {
-        id: updatedPlan.id,
+        id:
+          updatedActivity.id,
 
-        topic: updatedPlan.topic,
-        subject: updatedPlan.subject,
-        grade: updatedPlan.grade,
+        planId:
+          updatedActivity.plan_id,
+
+        topic:
+          updatedActivity.topic,
+
+        subject:
+          updatedActivity.subject,
 
         activityType:
-          updatedPlan.activity_type,
+          updatedActivity.activity_type,
 
-        title: updatedPlan.title,
+        title:
+          updatedActivity.title,
+
         description:
-          updatedPlan.description,
+          updatedActivity.description,
 
         durationMinutes:
-          updatedPlan.duration_minutes,
+          Number(
+            updatedActivity.estimated_minutes ??
+              0,
+          ),
 
-        priority: updatedPlan.priority,
-
-        status: updatedPlan.status,
+        status:
+          updatedActivity.status,
 
         scheduledDate:
-          updatedPlan.scheduled_date,
+          updatedActivity.activity_date,
 
         completedAt:
-          updatedPlan.completed_at,
+          updatedActivity.completed_at,
       },
     });
   } catch (error) {
     console.error(
-      "Study plan update error:",
+      "Study plan PATCH error:",
       error,
     );
 
     return NextResponse.json(
       {
+        success: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to update study plan",
+          "Failed to update study activity.",
       },
-      { status: 500 },
+      {
+        status: 500,
+      },
     );
   }
 }

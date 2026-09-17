@@ -24,11 +24,6 @@ function normalizeAnswer(text: string): string {
 
 /**
  * Check whether the student's answer is an obvious exact/normalized match.
- *
- * This avoids unnecessary AI calls for answers such as:
- * "Water"
- * "water."
- * " WATER "
  */
 function isNormalizedExactMatch(
   studentAnswer: string,
@@ -38,6 +33,28 @@ function isNormalizedExactMatch(
     normalizeAnswer(studentAnswer) ===
     normalizeAnswer(correctAnswer)
   );
+}
+
+/**
+ * Create safe deterministic feedback for a correct answer.
+ *
+ * We intentionally do not ask AI to generate feedback for a correct
+ * answer because the feedback must stay aligned with the saved
+ * correctAnswer.
+ */
+function createCorrectFeedback(
+  correctAnswer: string,
+): string {
+  return `Correct! ${correctAnswer.trim()} is the expected answer. Great job!`;
+}
+
+/**
+ * Create safe deterministic feedback for an exact match.
+ */
+function createExactMatchFeedback(
+  correctAnswer: string,
+): string {
+  return `Correct! ${correctAnswer.trim()} is the expected answer. Great job!`;
 }
 
 export async function evaluateAnswer({
@@ -56,28 +73,47 @@ export async function evaluateAnswer({
     normalizeAnswer(correctAnswer);
 
   // --------------------------------------------------
-  // 1. Deterministic exact/normalized match
+  // 1. Validate input
   // --------------------------------------------------
 
   if (
-    normalizedStudentAnswer &&
-    normalizedStudentAnswer === normalizedCorrectAnswer
+    !normalizedStudentAnswer ||
+    !normalizedCorrectAnswer
   ) {
     return {
-      evaluation: "correct",
-      score: 100,
-      feedback: "Correct! Great job!",
+      evaluation: "incorrect",
+      score: 0,
+      feedback:
+        "Please provide an answer and try again.",
     };
   }
 
   // --------------------------------------------------
-  // 2. AI semantic evaluation
+  // 2. Deterministic exact/normalized match
+  // --------------------------------------------------
+
+  if (
+    normalizedStudentAnswer ===
+    normalizedCorrectAnswer
+  ) {
+    return {
+      evaluation: "correct",
+      score: 100,
+      feedback:
+        createExactMatchFeedback(correctAnswer),
+    };
+  }
+
+  // --------------------------------------------------
+  // 3. AI semantic evaluation
   // --------------------------------------------------
 
   const prompt = `
 You are an educational answer evaluator for EduMate.
 
 Evaluate the student's answer against the expected answer.
+
+You MUST evaluate ONLY the information provided below.
 
 Question:
 ${question}
@@ -88,26 +124,65 @@ ${correctAnswer}
 Student Answer:
 ${studentAnswer}
 
-Important evaluation guidance:
+IMPORTANT FEEDBACK RULES:
 
 1. Evaluate the meaning of the student's answer, not exact wording.
-2. Accept different wording when the meaning is correct.
-3. Accept simple answers from school students when they correctly answer what was asked.
-4. Do not mark an answer incorrect only because it is shorter than the expected answer.
-5. If the question asks for ONE example, ONE item, or ONE thing, a single correct example is enough.
-6. If the expected answer contains several valid possibilities, accept any one of those possibilities when the question asks for one.
-7. Accept common student-friendly wording when it clearly represents the same idea.
-8. Do not require the student to use technical terminology if their answer clearly demonstrates the required understanding.
-9. "correct" means the answer demonstrates the required understanding.
-10. "partially_correct" means the answer contains some correct understanding but is incomplete or missing an important part.
-11. "incorrect" means the answer does not demonstrate the required understanding.
-12. Do not invent correctness when the student's answer is factually wrong.
-13. Be fair to a school student.
-14. Keep feedback short, friendly, and educational.
-15. Do not reveal unnecessary information.
-16. Return JSON only.
 
-Examples of acceptable semantic matching:
+2. Accept different wording when the meaning is correct.
+
+3. Accept simple answers from school students when they correctly
+   answer what was asked.
+
+4. Do not mark an answer incorrect only because it is shorter
+   than the expected answer.
+
+5. If the question asks for ONE example, ONE item, or ONE thing,
+   a single correct example is enough.
+
+6. Accept common student-friendly wording when it clearly
+   represents the same idea.
+
+7. Do not require technical terminology when the student's
+   answer clearly demonstrates the required understanding.
+
+8. "correct" means the student's answer demonstrates the
+   required understanding.
+
+9. "partially_correct" means the student's answer contains
+   some correct understanding but is incomplete.
+
+10. "incorrect" means the student's answer does not demonstrate
+    the required understanding.
+
+11. Do not invent correctness when the student's answer is
+    factually wrong.
+
+12. Be fair to a school student.
+
+13. Keep feedback short, friendly, and educational.
+
+14. VERY IMPORTANT:
+    Feedback MUST remain strictly about the Question,
+    Expected Answer, and Student Answer.
+
+15. NEVER introduce a different answer, concept, fact, example,
+    scientific term, object, process, or explanation that is
+    not necessary to evaluate the student's answer.
+
+16. If the evaluation is "correct", the feedback must confirm
+    the student's answer using ONLY the expected answer.
+
+17. If the evaluation is "correct", DO NOT replace the expected
+    answer with another concept from your general knowledge.
+
+18. The Expected Answer is the authoritative answer for this
+    evaluation.
+
+19. Do not correct, reinterpret, or replace the Expected Answer.
+
+20. Return JSON only.
+
+Examples:
 
 Expected Answer:
 water
@@ -145,47 +220,53 @@ They need sunlight.
 Evaluation:
 partially_correct
 
-Return exactly this JSON structure:
+Return exactly:
 
 {
   "evaluation": "correct",
   "score": 100,
-  "feedback": "Great job! Your answer shows the correct idea."
+  "feedback": "Your answer matches the expected answer."
 }
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "object",
-          properties: {
-            evaluation: {
-              type: "string",
-              enum: [
-                "correct",
-                "partially_correct",
-                "incorrect",
-              ],
+    const response =
+      await ai.models.generateContent({
+        model: "gemini-3.5-flash-lite",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+
+          responseSchema: {
+            type: "object",
+
+            properties: {
+              evaluation: {
+                type: "string",
+                enum: [
+                  "correct",
+                  "partially_correct",
+                  "incorrect",
+                ],
+              },
+
+              score: {
+                type: "number",
+              },
+
+              feedback: {
+                type: "string",
+              },
             },
-            score: {
-              type: "number",
-            },
-            feedback: {
-              type: "string",
-            },
+
+            required: [
+              "evaluation",
+              "score",
+              "feedback",
+            ],
           },
-          required: [
-            "evaluation",
-            "score",
-            "feedback",
-          ],
         },
-      },
-    });
+      });
 
     const text = response.text?.trim();
 
@@ -199,7 +280,7 @@ Return exactly this JSON structure:
       JSON.parse(text) as AnswerEvaluationResult;
 
     // --------------------------------------------------
-    // 3. Validate AI result
+    // 4. Validate AI evaluation
     // --------------------------------------------------
 
     const validEvaluations: AnswerEvaluation[] = [
@@ -218,17 +299,79 @@ Return exactly this JSON structure:
       );
     }
 
-    const score = Math.max(
+    // --------------------------------------------------
+    // 5. Normalize score
+    // --------------------------------------------------
+
+    let score = Math.max(
       0,
-      Math.min(100, Number(result.score) || 0),
+      Math.min(
+        100,
+        Number(result.score) || 0,
+      ),
     );
+
+    // Keep score consistent with evaluation.
+    if (result.evaluation === "correct") {
+      score = 100;
+    } else if (
+      result.evaluation === "incorrect"
+    ) {
+      score = 0;
+    } else {
+      // Keep AI partial score between 1 and 99.
+      score = Math.max(
+        1,
+        Math.min(99, score),
+      );
+    }
+
+    // --------------------------------------------------
+    // 6. SAFE feedback handling
+    // --------------------------------------------------
+
+    /**
+     * For correct answers, do NOT use Gemini's feedback.
+     *
+     * This prevents exactly the problem seen in the UI:
+     *
+     * Expected Answer: Energy
+     * AI feedback: Glucose...
+     *
+     * Instead, the expected answer stored by EduMate
+     * becomes the source of truth.
+     */
+    if (
+      result.evaluation === "correct"
+    ) {
+      return {
+        evaluation: "correct",
+        score: 100,
+        feedback:
+          createCorrectFeedback(
+            correctAnswer,
+          ),
+      };
+    }
+
+    // --------------------------------------------------
+    // 7. Partial / incorrect feedback
+    // --------------------------------------------------
+
+    const feedback =
+      result.feedback?.trim();
 
     return {
       evaluation: result.evaluation,
       score,
       feedback:
-        result.feedback?.trim() ||
-        "Let's keep learning and try again!",
+        feedback ||
+        (
+          result.evaluation ===
+          "partially_correct"
+            ? `You're on the right track. The expected answer is ${correctAnswer.trim()}.`
+            : `Let's review this topic. The expected answer is ${correctAnswer.trim()}.`
+        ),
     };
   } catch (error) {
     console.error(
@@ -237,7 +380,7 @@ Return exactly this JSON structure:
     );
 
     // --------------------------------------------------
-    // 4. Safe fallback
+    // 8. Safe deterministic fallback
     // --------------------------------------------------
 
     const isExactMatch =
@@ -246,16 +389,22 @@ Return exactly this JSON structure:
         correctAnswer,
       );
 
+    if (isExactMatch) {
+      return {
+        evaluation: "correct",
+        score: 100,
+        feedback:
+          createExactMatchFeedback(
+            correctAnswer,
+          ),
+      };
+    }
+
     return {
-      evaluation: isExactMatch
-        ? "correct"
-        : "incorrect",
-
-      score: isExactMatch ? 100 : 0,
-
-      feedback: isExactMatch
-        ? "Correct! Great job!"
-        : "Let's review this answer and try again.",
+      evaluation: "incorrect",
+      score: 0,
+      feedback:
+        `Let's review this answer. The expected answer is ${correctAnswer.trim()}.`,
     };
   }
 }

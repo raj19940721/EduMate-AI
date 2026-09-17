@@ -18,6 +18,7 @@ export default function HomeworkHelper() {
 
   const [question, setQuestion] = useState("");
   const [subject, setSubject] = useState("Science");
+  const [detectedSubject, setDetectedSubject] = useState("");
   const [grade, setGrade] = useState("3");
   const [mode, setMode] =
     useState<HomeworkMode>("explain");
@@ -62,6 +63,28 @@ export default function HomeworkHelper() {
       return;
     }
 
+    const normalizedQuestion = homeworkQuestion.trim();
+
+    if (normalizedQuestion.length > 5000) {
+      setError("Please keep the homework question under 5,000 characters.");
+      return;
+    }
+
+    const selectedSubject =
+      (detectedSubject !== undefined
+        ? detectedSubject
+        : subject
+      )
+        .trim()
+        .slice(0, 100);
+
+    const selectedGrade = Number(grade);
+
+    if (!Number.isInteger(selectedGrade) || selectedGrade < 1 || selectedGrade > 12) {
+      setError("Please select a valid grade.");
+      return;
+    }
+
     setMode(selectedMode);
     setLoading(true);
     setError("");
@@ -76,11 +99,9 @@ export default function HomeworkHelper() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            question:
-              homeworkQuestion.trim(),
-            subject:
-              detectedSubject || subject,
-            grade: Number(grade),
+            question: normalizedQuestion,
+            subject: selectedSubject,
+            grade: selectedGrade,
             mode: selectedMode,
           }),
         }
@@ -146,11 +167,15 @@ export default function HomeworkHelper() {
       return;
     }
 
-    const isPdf =
-      file.type === "application/pdf";
+    const allowedImageTypes = new Set([
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ]);
 
-    const isImage =
-      file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    const isImage = allowedImageTypes.has(file.type);
 
     // --------------------------------
     // Validate file type
@@ -168,6 +193,12 @@ export default function HomeworkHelper() {
     // --------------------------------
     // Validate file size
     // --------------------------------
+
+    if (file.size <= 0) {
+      setError("The selected file is empty.");
+      event.target.value = "";
+      return;
+    }
 
     const maxSize =
       10 * 1024 * 1024;
@@ -189,6 +220,7 @@ export default function HomeworkHelper() {
 
     setImageQuestions([]);
     setSelectedImageQuestion("");
+    setDetectedSubject("");
 
     try {
       // --------------------------------
@@ -253,16 +285,28 @@ export default function HomeworkHelper() {
         return;
       }
 
-      const homework =
-        data.homework;
+      const homework = data.homework;
+
+      if (
+        !homework ||
+        typeof homework !== "object" ||
+        !Array.isArray(homework.questions)
+      ) {
+        setError(
+          `The ${
+            isPdf ? "PDF" : "image"
+          } response was invalid. Please try again.`
+        );
+        return;
+      }
 
       // --------------------------------
       // Check file clarity
       // --------------------------------
 
       const fileIsClear = isPdf
-        ? homework.pdfClear
-        : homework.imageClear;
+        ? homework.pdfClear === true
+        : homework.imageClear === true;
 
       if (!fileIsClear) {
         setError(
@@ -279,44 +323,49 @@ export default function HomeworkHelper() {
       // Check questions
       // --------------------------------
 
-      if (
-        !homework.questions ||
-        homework.questions.length === 0
-      ) {
+      // --------------------------------
+      // Normalize extracted questions
+      // --------------------------------
+
+      const extractedQuestions = homework.questions
+        .filter(
+          (item: unknown): item is string =>
+            typeof item === "string"
+        )
+        .map((item: string) => item.trim())
+        .filter(Boolean)
+        .slice(0, 20);
+
+      if (extractedQuestions.length === 0) {
         setError(
           `I couldn't find any homework questions in the ${
             isPdf ? "PDF" : "image"
           }.`
         );
-
         return;
       }
 
-      // --------------------------------
-      // Store all detected questions
-      // --------------------------------
-
-      setImageQuestions(
-        homework.questions
-      );
+      setImageQuestions(extractedQuestions);
 
       // --------------------------------
       // Store detected subject
       // --------------------------------
 
-      const detectedSubject =
-        homework.subject &&
-        homework.subject !== "Unknown"
-          ? homework.subject
+      const extractedSubject =
+        typeof homework.subject === "string" &&
+        homework.subject.trim() &&
+        homework.subject.trim() !== "Unknown"
+          ? homework.subject.trim().slice(0, 100)
           : subject;
 
+      setDetectedSubject(extractedSubject);
+
       if (
-        homework.subject &&
-        homework.subject !== "Unknown"
+        typeof homework.subject === "string" &&
+        homework.subject.trim() &&
+        homework.subject.trim() !== "Unknown"
       ) {
-        setSubject(
-          homework.subject
-        );
+        setSubject(extractedSubject);
       }
 
       // --------------------------------
@@ -377,7 +426,8 @@ export default function HomeworkHelper() {
 
     await solveHomework(
       selectedImageQuestion,
-      "explain"
+      "explain",
+      detectedSubject || subject
     );
   }
 
@@ -394,6 +444,7 @@ export default function HomeworkHelper() {
     setImageName("");
     setImageQuestions([]);
     setSelectedImageQuestion("");
+    setDetectedSubject("");
 
     if (fileInputRef.current) {
       fileInputRef.current.value =
@@ -579,11 +630,20 @@ export default function HomeworkHelper() {
 
               <select
                 value={subject}
-                onChange={(e) =>
-                  setSubject(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  const newSubject = e.target.value;
+
+                  setSubject(newSubject);
+
+                  // Manual subject selection should override
+                  // any subject detected from a previous file.
+                  setDetectedSubject("");
+
+                  // The existing result belongs to the previous
+                  // subject, so clear it when the subject changes.
+                  setResult(null);
+                  setError("");
+                }}
                 className="w-full rounded-lg border border-gray-300 bg-white p-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
                 <option value="Science">

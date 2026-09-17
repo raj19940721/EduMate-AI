@@ -86,10 +86,36 @@ export async function GET() {
 // ========================================
 export async function POST(request: Request) {
   try {
+    // --------------------------------
+    // Create authenticated Supabase client
+    // --------------------------------
+    const supabase = await createSupabaseServerClient();
+
+    // --------------------------------
+    // Get authenticated user
+    // --------------------------------
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        {
+          error: "User is not authenticated.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    // --------------------------------
+    // Read request body
+    // --------------------------------
     const body = await request.json();
 
     const {
-      userId,
       topic,
       subject,
       grade,
@@ -97,17 +123,9 @@ export async function POST(request: Request) {
       notes,
     } = body;
 
-    if (!userId || typeof userId !== "string") {
-      return NextResponse.json(
-        {
-          error: "User ID is required.",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
-
+    // --------------------------------
+    // Validate topic
+    // --------------------------------
     if (!topic || typeof topic !== "string") {
       return NextResponse.json(
         {
@@ -119,11 +137,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // --------------------------------
+    // Save using authenticated user ID
+    // IMPORTANT:
+    // Never trust userId from request body.
+    // --------------------------------
     const { data, error } = await adminSupabase
       .from("student_learning_memory")
       .insert({
-        user_id: userId,
-        topic,
+        user_id: user.id,
+        topic: topic.trim(),
         subject: subject ?? null,
         grade: grade ?? null,
         mastery_level: masteryLevel,

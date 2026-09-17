@@ -35,26 +35,95 @@ export async function POST(request: Request) {
       topic,
       question,
       studentAnswer,
-      correctAnswer,
     } = body;
 
-    if (!topic || !question || !studentAnswer || !correctAnswer) {
+    // Never trust correctAnswer from the browser.
+    // The correct answer must be loaded from the authenticated
+    // user's saved quiz question in Supabase.
+    if (
+      typeof topic !== "string" ||
+      !topic.trim() ||
+      typeof question !== "string" ||
+      !question.trim() ||
+      typeof studentAnswer !== "string" ||
+      !studentAnswer.trim()
+    ) {
       return NextResponse.json(
         {
           error:
-            "topic, question, studentAnswer and correctAnswer are required",
+            "topic, question and studentAnswer are required",
         },
         { status: 400 },
       );
     }
 
+    const normalizedTopic = topic.trim();
+    const normalizedQuestion = question.trim();
+    const normalizedStudentAnswer = studentAnswer.trim();
+
     // --------------------------------------------------
-    // 3. Evaluate student's answer using AI
+    // 3. Load the correct answer from the user's quiz history
+    // --------------------------------------------------
+
+    const {
+      data: savedQuizQuestion,
+      error: quizQuestionError,
+    } = await adminSupabase
+      .from("quiz_questions")
+      .select("id, topic, question, correct_answer, difficulty")
+      .eq("user_id", user.id)
+      .eq("topic", normalizedTopic)
+      .eq("question", normalizedQuestion)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (quizQuestionError) {
+      console.error(
+        "Quiz question fetch error:",
+        quizQuestionError,
+      );
+
+      return NextResponse.json(
+        {
+          error: "Failed to load quiz question",
+        },
+        { status: 500 },
+      );
+    }
+
+    if (!savedQuizQuestion) {
+      return NextResponse.json(
+        {
+          error:
+            "Quiz question not found for this user",
+        },
+        { status: 404 },
+      );
+    }
+
+    const correctAnswer =
+      savedQuizQuestion.correct_answer;
+
+    if (
+      typeof correctAnswer !== "string" ||
+      !correctAnswer.trim()
+    ) {
+      return NextResponse.json(
+        {
+          error: "Correct answer is not available",
+        },
+        { status: 500 },
+      );
+    }
+
+    // --------------------------------------------------
+    // 4. Evaluate student's answer using AI
     // --------------------------------------------------
 
     const evaluation = await evaluateAnswer({
-      question,
-      studentAnswer,
+      question: normalizedQuestion,
+      studentAnswer: normalizedStudentAnswer,
       correctAnswer,
     });
 
@@ -74,7 +143,7 @@ export async function POST(request: Request) {
         "id, questions_asked, correct_answers, incorrect_answers, accuracy, mastery_level",
       )
       .eq("user_id", user.id)
-      .eq("topic", topic)
+      .eq("topic", normalizedTopic)
       .maybeSingle();
 
     if (memoryError) {
@@ -153,7 +222,7 @@ export async function POST(request: Request) {
     });
 
     console.log("Smart Review Schedule:", {
-      topic,
+      topic: normalizedTopic,
       accuracy,
       masteryLevel,
       nextReviewDate:
@@ -570,9 +639,9 @@ export async function POST(request: Request) {
         evaluation: evaluation.evaluation,
         score: evaluation.score,
         feedback: evaluation.feedback,
-        topic,
-        question,
-        studentAnswer,
+        topic: normalizedTopic,
+        question: normalizedQuestion,
+        studentAnswer: normalizedStudentAnswer,
         correctAnswer,
       },
 

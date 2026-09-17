@@ -99,6 +99,52 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------
+    // Verify conversation belongs to current user
+    // --------------------------------
+    const {
+      data: conversationOwner,
+      error: conversationOwnerError,
+    } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("id", conversationId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (conversationOwnerError) {
+      console.error(
+        "Failed to verify conversation ownership:",
+        conversationOwnerError,
+      );
+
+      return new Response(
+        JSON.stringify({
+          error: "Failed to verify conversation.",
+        }),
+        {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (!conversationOwner) {
+      return new Response(
+        JSON.stringify({
+          error: "Conversation not found.",
+        }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }
+
+    // --------------------------------
     // Get student's long-term learning memory
     // --------------------------------
     const { data: learningMemories, error: learningMemoryError } =
