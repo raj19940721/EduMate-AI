@@ -118,22 +118,13 @@ Otherwise return:
             },
             masteryLevel: {
               type: "string",
-              enum: [
-                "learning",
-                "practicing",
-                "mastered",
-              ],
+              enum: ["learning", "practicing", "mastered"],
             },
             notes: {
               type: "string",
             },
           },
-          required: [
-            "topic",
-            "subject",
-            "masteryLevel",
-            "notes",
-          ],
+          required: ["topic", "subject", "masteryLevel", "notes"],
         },
       },
     });
@@ -144,8 +135,7 @@ Otherwise return:
       return null;
     }
 
-    const result =
-      JSON.parse(text) as LearningTopic;
+    const result = JSON.parse(text) as LearningTopic;
 
     // ----------------------------------------
     // Reject empty topic
@@ -157,21 +147,13 @@ Otherwise return:
     // ----------------------------------------
     // Never store General Knowledge
     // ----------------------------------------
-    if (
-      result.topic
-        .trim()
-        .toLowerCase() ===
-      "general knowledge"
-    ) {
+    if (result.topic.trim().toLowerCase() === "general knowledge") {
       return null;
     }
 
     return result;
   } catch (error) {
-    console.error(
-      "Learning topic extraction failed:",
-      error,
-    );
+    console.error("Learning topic extraction failed:", error);
 
     return null;
   }

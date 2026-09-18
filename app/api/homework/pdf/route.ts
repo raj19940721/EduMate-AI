@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         },
         {
           status: 401,
-        }
+        },
       );
     }
 
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -73,19 +73,18 @@ export async function POST(request: Request) {
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         {
-          error:
-            "PDF is too large. Please upload a PDF smaller than 10 MB.",
+          error: "PDF is too large. Please upload a PDF smaller than 10 MB.",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -93,7 +92,7 @@ export async function POST(request: Request) {
     // 5. Guardrails
     // --------------------------------
     const guardrailResult = checkGuardrails(
-      "Read and extract the homework questions from this uploaded PDF."
+      "Read and extract the homework questions from this uploaded PDF.",
     );
 
     if (!guardrailResult.allowed) {
@@ -101,13 +100,11 @@ export async function POST(request: Request) {
         {
           success: false,
           blocked: true,
-          message:
-            guardrailResult.message ??
-            "I can't help with that request.",
+          message: guardrailResult.message ?? "I can't help with that request.",
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -196,12 +193,7 @@ Return exactly this structure:
               type: "string",
             },
           },
-          required: [
-            "subject",
-            "questions",
-            "pdfClear",
-            "message",
-          ],
+          required: ["subject", "questions", "pdfClear", "message"],
         },
       },
     });
@@ -218,7 +210,7 @@ Return exactly this structure:
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
@@ -227,37 +219,29 @@ Return exactly this structure:
     try {
       result = JSON.parse(text);
     } catch (parseError) {
-      console.error(
-        "Failed to parse Gemini PDF response:",
-        parseError
-      );
+      console.error("Failed to parse Gemini PDF response:", parseError);
 
       return NextResponse.json(
         {
-          error:
-            "AI returned an invalid PDF extraction response.",
+          error: "AI returned an invalid PDF extraction response.",
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
     // --------------------------------
     // 9. Validate Gemini response
     // --------------------------------
-    if (
-      typeof result !== "object" ||
-      result === null
-    ) {
+    if (typeof result !== "object" || result === null) {
       return NextResponse.json(
         {
-          error:
-            "AI returned an invalid PDF extraction response.",
+          error: "AI returned an invalid PDF extraction response.",
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
@@ -274,12 +258,11 @@ Return exactly this structure:
     ) {
       return NextResponse.json(
         {
-          error:
-            "AI returned an invalid PDF extraction response.",
+          error: "AI returned an invalid PDF extraction response.",
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
@@ -287,25 +270,18 @@ Return exactly this structure:
     // 10. Validate extracted questions
     // --------------------------------
     const questions = parsed.questions
-      .filter(
-        (question): question is string =>
-          typeof question === "string"
-      )
+      .filter((question): question is string => typeof question === "string")
       .map((question) => question.trim())
       .filter(Boolean)
       .slice(0, MAX_QUESTIONS)
-      .map((question) =>
-        question.slice(0, MAX_QUESTION_LENGTH)
-      );
+      .map((question) => question.slice(0, MAX_QUESTION_LENGTH));
 
     // --------------------------------
     // 11. Validate subject
     // --------------------------------
     const subject =
       typeof parsed.subject === "string"
-        ? parsed.subject
-            .trim()
-            .slice(0, MAX_SUBJECT_LENGTH)
+        ? parsed.subject.trim().slice(0, MAX_SUBJECT_LENGTH)
         : "Unknown";
 
     // --------------------------------
@@ -313,9 +289,7 @@ Return exactly this structure:
     // --------------------------------
     const message =
       typeof parsed.message === "string"
-        ? parsed.message
-            .trim()
-            .slice(0, MAX_MESSAGE_LENGTH)
+        ? parsed.message.trim().slice(0, MAX_MESSAGE_LENGTH)
         : "";
 
     // --------------------------------
@@ -341,7 +315,7 @@ Return exactly this structure:
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

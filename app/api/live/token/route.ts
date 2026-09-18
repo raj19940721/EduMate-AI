@@ -15,10 +15,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // 2. Create Gemini client using server-side API key
@@ -27,7 +24,7 @@ export async function GET() {
     if (!apiKey) {
       return NextResponse.json(
         { error: "GEMINI_API_KEY is not configured" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -39,9 +36,7 @@ export async function GET() {
     const token = await ai.authTokens.create({
       config: {
         uses: 1,
-        expireTime: new Date(
-          Date.now() + 30 * 60 * 1000
-        ).toISOString(),
+        expireTime: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
 
         liveConnectConstraints: {
           model: MODEL,
@@ -87,7 +82,7 @@ Rules:
     if (!token.name) {
       return NextResponse.json(
         { error: "Failed to create Live API token" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -102,12 +97,9 @@ Rules:
     return NextResponse.json(
       {
         error: "Failed to create voice session token.",
-        details:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -19,10 +19,7 @@ export async function POST(request: Request) {
     const requestStart = Date.now();
 
     // 2. Validate question
-    if (
-      typeof question !== "string" ||
-      !question.trim()
-    ) {
+    if (typeof question !== "string" || !question.trim()) {
       return NextResponse.json(
         {
           error: "Question is required",
@@ -34,15 +31,12 @@ export async function POST(request: Request) {
     }
 
     // 3. Guardrails
-    const guardrailResult =
-      checkGuardrails(question);
+    const guardrailResult = checkGuardrails(question);
 
     if (!guardrailResult.allowed) {
       return NextResponse.json(
         {
-          error:
-            guardrailResult.message ??
-            "Question blocked by guardrails.",
+          error: guardrailResult.message ?? "Question blocked by guardrails.",
         },
         {
           status: 400,
@@ -53,52 +47,35 @@ export async function POST(request: Request) {
     // 4. Generate query embedding
     const embeddingStart = Date.now();
 
-    const queryEmbedding =
-      await generateEmbedding(question);
+    const queryEmbedding = await generateEmbedding(question);
 
-    const embeddingTimeMs =
-      Date.now() - embeddingStart;
+    const embeddingTimeMs = Date.now() - embeddingStart;
 
-    console.log(
-      "Mock RAG embedding dimensions:",
-      queryEmbedding.length,
-    );
+    console.log("Mock RAG embedding dimensions:", queryEmbedding.length);
 
     // 5. Vector search with metadata filters
     const retrievalStart = Date.now();
 
-    const { data: results, error } =
-      await adminSupabase.rpc(
-        "match_knowledge_chunks",
-        {
-          query_embedding: queryEmbedding,
-          match_threshold: 0.3,
-          match_count: 5,
-          match_grade:
-            typeof grade === "number"
-              ? grade
-              : null,
-          match_subject:
-            typeof subject === "string" &&
-            subject.trim()
-              ? subject
-              : null,
-        },
-      );
+    const { data: results, error } = await adminSupabase.rpc(
+      "match_knowledge_chunks",
+      {
+        query_embedding: queryEmbedding,
+        match_threshold: 0.3,
+        match_count: 5,
+        match_grade: typeof grade === "number" ? grade : null,
+        match_subject:
+          typeof subject === "string" && subject.trim() ? subject : null,
+      },
+    );
 
-    const retrievalTimeMs =
-      Date.now() - retrievalStart;
+    const retrievalTimeMs = Date.now() - retrievalStart;
 
     if (error) {
-      console.error(
-        "Mock RAG RPC error:",
-        error,
-      );
+      console.error("Mock RAG RPC error:", error);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to search knowledge.",
+          error: "Failed to search knowledge.",
         },
         {
           status: 500,
@@ -106,55 +83,36 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(
-      "Mock RAG results:",
-      results?.length ?? 0,
-    );
+    console.log("Mock RAG results:", results?.length ?? 0);
 
     // 6. Evaluate retrieval results
-    const evaluatedResults = (
-      results ?? []
-    ).map((result: any) => ({
+    const evaluatedResults = (results ?? []).map((result: any) => ({
       ...result,
-      evaluation: evaluateRetrieval(
-        result.similarity,
-      ),
+      evaluation: evaluateRetrieval(result.similarity),
     }));
 
     console.log(
       "Mock RAG evaluation:",
-      evaluatedResults.map(
-        (result: any) => ({
-          similarity:
-            result.similarity,
-          relevance:
-            result.evaluation.relevance,
-        }),
-      ),
+      evaluatedResults.map((result: any) => ({
+        similarity: result.similarity,
+        relevance: result.evaluation.relevance,
+      })),
     );
 
     // 7. Accept HIGH + MEDIUM results
     // 7. Accept only HIGH-confidence results for answering
-const relevantResults =
-  evaluatedResults.filter(
-    (result: any) =>
-      result.evaluation.relevance === "high",
-  );
+    const relevantResults = evaluatedResults.filter(
+      (result: any) => result.evaluation.relevance === "high",
+    );
 
-console.log(
-  "Mock RAG usable results:",
-  relevantResults.length,
-);
+    console.log("Mock RAG usable results:", relevantResults.length);
 
     // 8. Build knowledge context
     const knowledgeContext =
       relevantResults.length > 0
         ? relevantResults
             .map(
-              (
-                result: any,
-                index: number,
-              ) => `
+              (result: any, index: number) => `
 Knowledge ${index + 1}:
 ${result.content}
 
@@ -172,31 +130,19 @@ ${result.evaluation.relevance}
         : "No relevant knowledge was found.";
 
     // 9. Generate local mock answer
-    const response =
-      generateMockResponse(
-        question,
-        knowledgeContext,
-      );
+    const response = generateMockResponse(question, knowledgeContext);
 
     // 10. Observability
-    const totalTimeMs =
-      Date.now() - requestStart;
+    const totalTimeMs = Date.now() - requestStart;
 
-    const topResult =
-      evaluatedResults[0];
+    const topResult = evaluatedResults[0];
 
     await logRagObservability({
       question,
 
-      grade:
-        typeof grade === "number"
-          ? grade
-          : null,
+      grade: typeof grade === "number" ? grade : null,
 
-      subject:
-        typeof subject === "string"
-          ? subject
-          : null,
+      subject: typeof subject === "string" ? subject : null,
 
       guardrailAllowed: true,
 
@@ -204,18 +150,13 @@ ${result.evaluation.relevance}
       retrievalTimeMs,
       totalTimeMs,
 
-      resultCount:
-        evaluatedResults.length,
+      resultCount: evaluatedResults.length,
 
-      usableResultCount:
-        relevantResults.length,
+      usableResultCount: relevantResults.length,
 
-      topSimilarity:
-        topResult?.similarity ?? null,
+      topSimilarity: topResult?.similarity ?? null,
 
-      topRelevance:
-        topResult?.evaluation
-          .relevance ?? null,
+      topRelevance: topResult?.evaluation.relevance ?? null,
 
       aiMode: "mock",
     });
@@ -225,25 +166,19 @@ ${result.evaluation.relevance}
       response,
 
       rag: {
-        resultCount:
-          evaluatedResults.length,
+        resultCount: evaluatedResults.length,
 
-        usableResultCount:
-          relevantResults.length,
+        usableResultCount: relevantResults.length,
 
         results: evaluatedResults,
       },
     });
   } catch (error) {
-    console.error(
-      "Mock RAG chat error:",
-      error,
-    );
+    console.error("Mock RAG chat error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to process mock RAG chat.",
+        error: "Failed to process mock RAG chat.",
       },
       {
         status: 500,

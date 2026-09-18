@@ -10,10 +10,7 @@ export async function POST(request: Request) {
     const grade = body.grade;
     const subject = body.subject;
 
-    if (
-      typeof query !== "string" ||
-      !query.trim()
-    ) {
+    if (typeof query !== "string" || !query.trim()) {
       return NextResponse.json(
         {
           error: "Query is required",
@@ -23,39 +20,22 @@ export async function POST(request: Request) {
     }
 
     // Generate query embedding
-    const queryEmbedding =
-      await generateEmbedding(query);
+    const queryEmbedding = await generateEmbedding(query);
 
-    console.log(
-      "Query embedding dimensions:",
-      queryEmbedding.length,
-    );
+    console.log("Query embedding dimensions:", queryEmbedding.length);
 
     // Vector search with metadata filters
-    const { data, error } =
-      await supabase.rpc(
-        "match_knowledge_chunks",
-        {
-          query_embedding: queryEmbedding,
-          match_threshold: 0.3,
-          match_count: 5,
-          match_grade:
-            typeof grade === "number"
-              ? grade
-              : null,
-          match_subject:
-            typeof subject === "string" &&
-            subject.trim()
-              ? subject
-              : null,
-        },
-      );
+    const { data, error } = await supabase.rpc("match_knowledge_chunks", {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.3,
+      match_count: 5,
+      match_grade: typeof grade === "number" ? grade : null,
+      match_subject:
+        typeof subject === "string" && subject.trim() ? subject : null,
+    });
 
     if (error) {
-      console.error(
-        "Vector search error:",
-        error,
-      );
+      console.error("Vector search error:", error);
 
       return NextResponse.json(
         {
@@ -69,17 +49,12 @@ export async function POST(request: Request) {
       results: data ?? [],
     });
   } catch (error) {
-    console.error(
-      "Knowledge search error:",
-      error,
-    );
+    console.error("Knowledge search error:", error);
 
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to search knowledge",
+          error instanceof Error ? error.message : "Failed to search knowledge",
       },
       { status: 500 },
     );

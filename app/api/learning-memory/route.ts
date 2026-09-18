@@ -45,10 +45,7 @@ export async function GET() {
       });
 
     if (error) {
-      console.error(
-        "Failed to retrieve learning memory:",
-        error,
-      );
+      console.error("Failed to retrieve learning memory:", error);
 
       return NextResponse.json(
         {
@@ -65,10 +62,7 @@ export async function GET() {
       count: data?.length ?? 0,
     });
   } catch (error) {
-    console.error(
-      "Learning memory GET API error:",
-      error,
-    );
+    console.error("Learning memory GET API error:", error);
 
     return NextResponse.json(
       {
@@ -115,13 +109,7 @@ export async function POST(request: Request) {
     // --------------------------------
     const body = await request.json();
 
-    const {
-      topic,
-      subject,
-      grade,
-      masteryLevel = "learning",
-      notes,
-    } = body;
+    const { topic, subject, grade, masteryLevel = "learning", notes } = body;
 
     // --------------------------------
     // Validate topic
@@ -156,10 +144,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error(
-        "Learning memory insert error:",
-        error,
-      );
+      console.error("Learning memory insert error:", error);
 
       return NextResponse.json(
         {
@@ -176,10 +161,7 @@ export async function POST(request: Request) {
       memory: data,
     });
   } catch (error) {
-    console.error(
-      "Learning memory POST API error:",
-      error,
-    );
+    console.error("Learning memory POST API error:", error);
 
     return NextResponse.json(
       {

@@ -55,17 +55,11 @@ function getIndiaDate() {
     day: "2-digit",
   }).formatToParts(new Date());
 
-  const year = parts.find(
-    (part) => part.type === "year",
-  )?.value;
+  const year = parts.find((part) => part.type === "year")?.value;
 
-  const month = parts.find(
-    (part) => part.type === "month",
-  )?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
 
-  const day = parts.find(
-    (part) => part.type === "day",
-  )?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
 
   if (!year || !month || !day) {
     throw new Error("Unable to determine India date");
@@ -105,16 +99,11 @@ function mapActivity(
   activity: any,
   memoryMap: Map<string, any>,
 ): StudyPlanItem {
-  const memory = memoryMap.get(
-    `${activity.topic}::${activity.subject ?? ""}`,
-  );
+  const memory = memoryMap.get(`${activity.topic}::${activity.subject ?? ""}`);
 
-  const accuracy = Number(
-    memory?.accuracy ?? 0,
-  );
+  const accuracy = Number(memory?.accuracy ?? 0);
 
-  const masteryLevel =
-    memory?.mastery_level ?? "learning";
+  const masteryLevel = memory?.mastery_level ?? "learning";
 
   return {
     id: activity.id,
@@ -125,34 +114,25 @@ function mapActivity(
 
     grade: activity.grade,
 
-    activityType:
-      activity.activity_type,
+    activityType: activity.activity_type,
 
     title: activity.title,
 
-    description:
-      activity.description,
+    description: activity.description,
 
-    durationMinutes:
-      Number(activity.estimated_minutes ?? 0),
+    durationMinutes: Number(activity.estimated_minutes ?? 0),
 
-    priority: getPriority(
-      accuracy,
-      masteryLevel,
-    ),
+    priority: getPriority(accuracy, masteryLevel),
 
-    status:
-      activity.status ?? "pending",
+    status: activity.status ?? "pending",
 
     accuracy,
 
     masteryLevel,
 
-    scheduledDate:
-      activity.activity_date,
+    scheduledDate: activity.activity_date,
 
-    completedAt:
-      activity.completed_at ?? null,
+    completedAt: activity.completed_at ?? null,
   };
 }
 
@@ -160,38 +140,21 @@ function mapActivity(
 // Summary
 // --------------------------------------------------
 
-function buildSummary(
-  studyPlan: StudyPlanItem[],
-) {
+function buildSummary(studyPlan: StudyPlanItem[]) {
   return {
-    totalTopics:
-      studyPlan.length,
+    totalTopics: studyPlan.length,
 
-    highPriority:
-      studyPlan.filter(
-        (item) =>
-          item.priority === "high",
-      ).length,
+    highPriority: studyPlan.filter((item) => item.priority === "high").length,
 
-    mediumPriority:
-      studyPlan.filter(
-        (item) =>
-          item.priority === "medium",
-      ).length,
+    mediumPriority: studyPlan.filter((item) => item.priority === "medium")
+      .length,
 
-    lowPriority:
-      studyPlan.filter(
-        (item) =>
-          item.priority === "low",
-      ).length,
+    lowPriority: studyPlan.filter((item) => item.priority === "low").length,
 
-    totalDurationMinutes:
-      studyPlan.reduce(
-        (total, item) =>
-          total +
-          item.durationMinutes,
-        0,
-      ),
+    totalDurationMinutes: studyPlan.reduce(
+      (total, item) => total + item.durationMinutes,
+      0,
+    ),
   };
 }
 
@@ -205,14 +168,12 @@ export async function GET() {
     // Authenticate
     // ----------------------------------------------
 
-    const supabaseServer =
-      await createSupabaseServerClient();
+    const supabaseServer = await createSupabaseServerClient();
 
     const {
       data: { user },
       error: authError,
-    } =
-      await supabaseServer.auth.getUser();
+    } = await supabaseServer.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
@@ -230,38 +191,25 @@ export async function GET() {
     // India date
     // ----------------------------------------------
 
-    const today =
-      getIndiaDate();
+    const today = getIndiaDate();
 
     // ----------------------------------------------
     // Student
     // ----------------------------------------------
 
-    const {
-      data: student,
-      error: studentError,
-    } = await supabase
+    const { data: student, error: studentError } = await supabase
       .from("students")
-      .select(
-        "name, grade, subject",
-      )
-      .eq(
-        "user_id",
-        user.id,
-      )
+      .select("name, grade, subject")
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (studentError) {
-      console.error(
-        "Study plan student error:",
-        studentError,
-      );
+      console.error("Study plan student error:", studentError);
 
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Failed to load student profile.",
+          error: "Failed to load student profile.",
         },
         {
           status: 500,
@@ -273,8 +221,7 @@ export async function GET() {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Student profile not found.",
+          error: "Student profile not found.",
         },
         {
           status: 404,
@@ -286,10 +233,7 @@ export async function GET() {
     // Find active plan
     // ----------------------------------------------
 
-    const {
-      data: savedPlans,
-      error: planError,
-    } = await supabase
+    const { data: savedPlans, error: planError } = await supabase
       .from("study_plans")
       .select(
         `
@@ -302,33 +246,20 @@ export async function GET() {
         created_at
         `,
       )
-      .eq(
-        "user_id",
-        user.id,
-      )
-      .eq(
-        "status",
-        "active",
-      )
-      .order(
-        "created_at",
-        {
-          ascending: false,
-        },
-      )
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("created_at", {
+        ascending: false,
+      })
       .limit(1);
 
     if (planError) {
-      console.error(
-        "Study plan load error:",
-        planError,
-      );
+      console.error("Study plan load error:", planError);
 
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Failed to load study plan.",
+          error: "Failed to load study plan.",
         },
         {
           status: 500,
@@ -336,8 +267,7 @@ export async function GET() {
       );
     }
 
-    const savedPlan =
-      savedPlans?.[0];
+    const savedPlan = savedPlans?.[0];
 
     // ----------------------------------------------
     // No active plan
@@ -347,21 +277,14 @@ export async function GET() {
       return NextResponse.json({
         success: true,
 
-        source:
-          "not_generated",
+        source: "not_generated",
 
         student: {
-          name:
-            student.name,
+          name: student.name,
 
-          grade:
-            Number(
-              student.grade,
-            ),
+          grade: Number(student.grade),
 
-          subject:
-            student.subject ??
-            "General",
+          subject: student.subject ?? "General",
         },
 
         studyPlan: [],
@@ -374,8 +297,7 @@ export async function GET() {
           totalDurationMinutes: 0,
         },
 
-        message:
-          "No active study plan is available yet.",
+        message: "No active study plan is available yet.",
       });
     }
 
@@ -383,14 +305,8 @@ export async function GET() {
     // Load activities
     // ----------------------------------------------
 
-    const {
-      data: activities,
-      error:
-        activitiesError,
-    } = await supabase
-      .from(
-        "study_plan_activities",
-      )
+    const { data: activities, error: activitiesError } = await supabase
+      .from("study_plan_activities")
       .select(
         `
         id,
@@ -406,38 +322,22 @@ export async function GET() {
         completed_at
         `,
       )
-      .eq(
-        "plan_id",
-        savedPlan.id,
-      )
-      .eq(
-        "user_id",
-        user.id,
-      )
-      .order(
-        "activity_date",
-        {
-          ascending: true,
-        },
-      )
-      .order(
-        "created_at",
-        {
-          ascending: true,
-        },
-      );
+      .eq("plan_id", savedPlan.id)
+      .eq("user_id", user.id)
+      .order("activity_date", {
+        ascending: true,
+      })
+      .order("created_at", {
+        ascending: true,
+      });
 
     if (activitiesError) {
-      console.error(
-        "Study plan activities error:",
-        activitiesError,
-      );
+      console.error("Study plan activities error:", activitiesError);
 
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Failed to load study activities.",
+          error: "Failed to load study activities.",
         },
         {
           status: 500,
@@ -449,13 +349,8 @@ export async function GET() {
     // Load learning memory
     // ----------------------------------------------
 
-    const {
-      data: memories,
-      error: memoryError,
-    } = await supabase
-      .from(
-        "student_learning_memory",
-      )
+    const { data: memories, error: memoryError } = await supabase
+      .from("student_learning_memory")
       .select(
         `
         topic,
@@ -464,22 +359,15 @@ export async function GET() {
         mastery_level
         `,
       )
-      .eq(
-        "user_id",
-        user.id,
-      );
+      .eq("user_id", user.id);
 
     if (memoryError) {
-      console.error(
-        "Study plan memory error:",
-        memoryError,
-      );
+      console.error("Study plan memory error:", memoryError);
 
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Failed to load learning progress.",
+          error: "Failed to load learning progress.",
         },
         {
           status: 500,
@@ -491,31 +379,19 @@ export async function GET() {
     // Memory lookup
     // ----------------------------------------------
 
-    const memoryMap =
-      new Map<string, any>();
+    const memoryMap = new Map<string, any>();
 
-    for (
-      const memory of
-        memories ?? []
-    ) {
-      memoryMap.set(
-        `${memory.topic}::${memory.subject ?? ""}`,
-        memory,
-      );
+    for (const memory of memories ?? []) {
+      memoryMap.set(`${memory.topic}::${memory.subject ?? ""}`, memory);
     }
 
     // ----------------------------------------------
     // Convert activities
     // ----------------------------------------------
 
-    const studyPlan =
-      (activities ?? []).map(
-        (activity) =>
-          mapActivity(
-            activity,
-            memoryMap,
-          ),
-      );
+    const studyPlan = (activities ?? []).map((activity) =>
+      mapActivity(activity, memoryMap),
+    );
 
     // ----------------------------------------------
     // Return
@@ -527,57 +403,38 @@ export async function GET() {
       source: "saved",
 
       student: {
-        name:
-          student.name,
+        name: student.name,
 
-        grade:
-          Number(
-            student.grade,
-          ),
+        grade: Number(student.grade),
 
-        subject:
-          student.subject ??
-          "General",
+        subject: student.subject ?? "General",
       },
 
       plan: {
-        id:
-          savedPlan.id,
+        id: savedPlan.id,
 
-        title:
-          savedPlan.title,
+        title: savedPlan.title,
 
-        grade:
-          savedPlan.grade,
+        grade: savedPlan.grade,
 
-        startDate:
-          savedPlan.start_date,
+        startDate: savedPlan.start_date,
 
-        endDate:
-          savedPlan.end_date,
+        endDate: savedPlan.end_date,
 
-        status:
-          savedPlan.status,
+        status: savedPlan.status,
       },
 
       studyPlan,
 
-      summary:
-        buildSummary(
-          studyPlan,
-        ),
+      summary: buildSummary(studyPlan),
     });
   } catch (error) {
-    console.error(
-      "Study plan GET error:",
-      error,
-    );
+    console.error("Study plan GET error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error:
-          "Failed to load study plan.",
+        error: "Failed to load study plan.",
       },
       {
         status: 500,

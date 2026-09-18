@@ -16,34 +16,23 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // --------------------------------------------------
     // 2. Load learning activity
     // --------------------------------------------------
 
-    const {
-      data: activities,
-      error: activityError,
-    } = await adminSupabase
+    const { data: activities, error: activityError } = await adminSupabase
       .from("learning_activity")
-      .select(
-        "activity_date, questions_answered, topics_studied",
-      )
+      .select("activity_date, questions_answered, topics_studied")
       .eq("user_id", user.id)
       .order("activity_date", {
         ascending: false,
       });
 
     if (activityError) {
-      console.error(
-        "Learning activity fetch error:",
-        activityError,
-      );
+      console.error("Learning activity fetch error:", activityError);
 
       return NextResponse.json(
         {
@@ -88,36 +77,23 @@ export async function GET() {
 
     const today = new Date();
 
-    const todayString = today
-      .toISOString()
-      .split("T")[0];
+    const todayString = today.toISOString().split("T")[0];
 
     const yesterday = new Date(today);
-    yesterday.setUTCDate(
-      yesterday.getUTCDate() - 1,
-    );
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
-    const yesterdayString = yesterday
-      .toISOString()
-      .split("T")[0];
+    const yesterdayString = yesterday.toISOString().split("T")[0];
 
     let currentStreak = 0;
 
     // A streak can start today or yesterday.
-    if (
-      activityDates.has(todayString) ||
-      activityDates.has(yesterdayString)
-    ) {
+    if (activityDates.has(todayString) || activityDates.has(yesterdayString)) {
       const streakDate = new Date(
-        activityDates.has(todayString)
-          ? todayString
-          : yesterdayString,
+        activityDates.has(todayString) ? todayString : yesterdayString,
       );
 
       while (true) {
-        const dateString = streakDate
-          .toISOString()
-          .split("T")[0];
+        const dateString = streakDate.toISOString().split("T")[0];
 
         if (!activityDates.has(dateString)) {
           break;
@@ -125,9 +101,7 @@ export async function GET() {
 
         currentStreak++;
 
-        streakDate.setUTCDate(
-          streakDate.getUTCDate() - 1,
-        );
+        streakDate.setUTCDate(streakDate.getUTCDate() - 1);
       }
     }
 
@@ -149,12 +123,10 @@ export async function GET() {
       if (!previousDate) {
         runningStreak = 1;
       } else {
-        const difference =
-          Math.round(
-            (currentDate.getTime() -
-              previousDate.getTime()) /
-              (1000 * 60 * 60 * 24),
-          );
+        const difference = Math.round(
+          (currentDate.getTime() - previousDate.getTime()) /
+            (1000 * 60 * 60 * 24),
+        );
 
         if (difference === 1) {
           runningStreak++;
@@ -163,10 +135,7 @@ export async function GET() {
         }
       }
 
-      bestStreak = Math.max(
-        bestStreak,
-        runningStreak,
-      );
+      bestStreak = Math.max(bestStreak, runningStreak);
 
       previousDate = currentDate;
     }
@@ -176,14 +145,12 @@ export async function GET() {
     // --------------------------------------------------
 
     const questionsAnswered = activities.reduce(
-      (total, activity) =>
-        total + (activity.questions_answered ?? 0),
+      (total, activity) => total + (activity.questions_answered ?? 0),
       0,
     );
 
     const topicsStudied = activities.reduce(
-      (total, activity) =>
-        total + (activity.topics_studied ?? 0),
+      (total, activity) => total + (activity.topics_studied ?? 0),
       0,
     );
 
@@ -196,26 +163,19 @@ export async function GET() {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
 
-      date.setUTCDate(
-        date.getUTCDate() - i,
-      );
+      date.setUTCDate(date.getUTCDate() - i);
 
-      const dateString = date
-        .toISOString()
-        .split("T")[0];
+      const dateString = date.toISOString().split("T")[0];
 
       const activity = activities.find(
-        (item) =>
-          item.activity_date === dateString,
+        (item) => item.activity_date === dateString,
       );
 
       weeklyActivity.push({
         date: dateString,
         active: Boolean(activity),
-        questionsAnswered:
-          activity?.questions_answered ?? 0,
-        topicsStudied:
-          activity?.topics_studied ?? 0,
+        questionsAnswered: activity?.questions_answered ?? 0,
+        topicsStudied: activity?.topics_studied ?? 0,
       });
     }
 
@@ -240,18 +200,12 @@ export async function GET() {
       weeklyActivity,
     });
   } catch (error) {
-    console.error(
-      "Learning streak API error:",
-      error,
-    );
+    console.error("Learning streak API error:", error);
 
     return NextResponse.json(
       {
         error: "Failed to calculate learning streak",
-        details:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     );

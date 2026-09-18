@@ -43,10 +43,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // --------------------------------
@@ -59,31 +56,26 @@ export async function POST(request: Request) {
     } catch {
       return NextResponse.json(
         { error: "Invalid request body." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // --------------------------------
     // 3. Validate topic
     // --------------------------------
-    if (
-      typeof body.topic !== "string" ||
-      !body.topic.trim()
-    ) {
+    if (typeof body.topic !== "string" || !body.topic.trim()) {
       return NextResponse.json(
         { error: "Please provide a topic to study." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const topic = body.topic
-      .trim()
-      .slice(0, MAX_TOPIC_LENGTH);
+    const topic = body.topic.trim().slice(0, MAX_TOPIC_LENGTH);
 
     if (!topic) {
       return NextResponse.json(
         { error: "Please provide a valid topic." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -96,10 +88,7 @@ export async function POST(request: Request) {
       const trimmedSubject = body.subject.trim();
 
       if (trimmedSubject) {
-        requestedSubject = trimmedSubject.slice(
-          0,
-          MAX_SUBJECT_LENGTH
-        );
+        requestedSubject = trimmedSubject.slice(0, MAX_SUBJECT_LENGTH);
       }
     }
 
@@ -107,7 +96,7 @@ export async function POST(request: Request) {
     // 5. Guardrails
     // --------------------------------
     const guardrailResult = checkGuardrails(
-      `Help a student study the topic: ${topic}`
+      `Help a student study the topic: ${topic}`,
     );
 
     if (!guardrailResult.allowed) {
@@ -115,40 +104,34 @@ export async function POST(request: Request) {
         {
           success: false,
           blocked: true,
-          message:
-            guardrailResult.message ??
-            "I can't help with that request.",
+          message: guardrailResult.message ?? "I can't help with that request.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // --------------------------------
     // 6. Load authenticated student
     // --------------------------------
-    const { data: student, error: studentError } =
-      await adminSupabase
-        .from("students")
-        .select("id, name, grade, age")
-        .eq("user_id", user.id)
-        .maybeSingle();
+    const { data: student, error: studentError } = await adminSupabase
+      .from("students")
+      .select("id, name, grade, age")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
     if (studentError) {
-      console.error(
-        "Study Mode student lookup error:",
-        studentError
-      );
+      console.error("Study Mode student lookup error:", studentError);
 
       return NextResponse.json(
         { error: "Failed to load student profile." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     if (!student) {
       return NextResponse.json(
         { error: "Student profile not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -157,54 +140,42 @@ export async function POST(request: Request) {
     // --------------------------------
     const grade = Number(student.grade);
 
-    if (
-      !Number.isInteger(grade) ||
-      grade < 1 ||
-      grade > 12
-    ) {
+    if (!Number.isInteger(grade) || grade < 1 || grade > 12) {
       return NextResponse.json(
         { error: "Student profile has an invalid grade." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // --------------------------------
     // 8. Load learning memory
     // --------------------------------
-    const { data: learningMemory, error: memoryError } =
-      await adminSupabase
-        .from("student_learning_memory")
-        .select(
-          "topic, subject, grade, mastery_level, notes, questions_asked, correct_answers, incorrect_answers, accuracy"
-        )
-        .eq("user_id", user.id)
-        .order("updated_at", {
-          ascending: false,
-        })
-        .limit(20);
+    const { data: learningMemory, error: memoryError } = await adminSupabase
+      .from("student_learning_memory")
+      .select(
+        "topic, subject, grade, mastery_level, notes, questions_asked, correct_answers, incorrect_answers, accuracy",
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", {
+        ascending: false,
+      })
+      .limit(20);
 
     if (memoryError) {
-      console.error(
-        "Study Mode learning memory error:",
-        memoryError
-      );
+      console.error("Study Mode learning memory error:", memoryError);
     }
 
     const relevantMemory =
       learningMemory?.find(
         (memory) =>
           typeof memory.topic === "string" &&
-          memory.topic.toLowerCase() ===
-            topic.toLowerCase()
+          memory.topic.toLowerCase() === topic.toLowerCase(),
       ) ?? null;
 
     // --------------------------------
     // 9. Determine subject
     // --------------------------------
-    const subject =
-      requestedSubject ||
-      relevantMemory?.subject ||
-      "General";
+    const subject = requestedSubject || relevantMemory?.subject || "General";
 
     // --------------------------------
     // 10. Retrieve relevant knowledge
@@ -212,49 +183,33 @@ export async function POST(request: Request) {
     let knowledgeContext = "";
 
     try {
-      const queryEmbedding =
-        await generateEmbedding(topic);
+      const queryEmbedding = await generateEmbedding(topic);
 
       const { data: knowledgeChunks, error: ragError } =
-        await adminSupabase.rpc(
-          "match_knowledge_chunks",
-          {
-            query_embedding: queryEmbedding,
-            match_threshold: 0.7,
-            match_count: 5,
-            match_grade: grade,
-            match_subject: subject,
-          }
-        );
+        await adminSupabase.rpc("match_knowledge_chunks", {
+          query_embedding: queryEmbedding,
+          match_threshold: 0.7,
+          match_count: 5,
+          match_grade: grade,
+          match_subject: subject,
+        });
 
       if (ragError) {
-        console.error(
-          "Study Mode RAG error:",
-          ragError
-        );
-      } else if (
-        knowledgeChunks &&
-        knowledgeChunks.length > 0
-      ) {
+        console.error("Study Mode RAG error:", ragError);
+      } else if (knowledgeChunks && knowledgeChunks.length > 0) {
         knowledgeContext = knowledgeChunks
           .map(
             (
               chunk: {
                 content?: string;
               },
-              index: number
-            ) =>
-              `Knowledge ${index + 1}:\n${
-                chunk.content ?? ""
-              }`
+              index: number,
+            ) => `Knowledge ${index + 1}:\n${chunk.content ?? ""}`,
           )
           .join("\n\n");
       }
     } catch (error) {
-      console.error(
-        "Study Mode embedding/RAG error:",
-        error
-      );
+      console.error("Study Mode embedding/RAG error:", error);
     }
 
     // --------------------------------
@@ -263,24 +218,12 @@ export async function POST(request: Request) {
     const memoryContext = relevantMemory
       ? `
 Previous learning information for this topic:
-- Mastery level: ${
-          relevantMemory.mastery_level ?? "learning"
-        }
-- Questions asked: ${
-          relevantMemory.questions_asked ?? 0
-        }
-- Correct answers: ${
-          relevantMemory.correct_answers ?? 0
-        }
-- Incorrect answers: ${
-          relevantMemory.incorrect_answers ?? 0
-        }
-- Accuracy: ${
-          relevantMemory.accuracy ?? 0
-        }%
-- Notes: ${
-          relevantMemory.notes ?? "None"
-        }
+- Mastery level: ${relevantMemory.mastery_level ?? "learning"}
+- Questions asked: ${relevantMemory.questions_asked ?? 0}
+- Correct answers: ${relevantMemory.correct_answers ?? 0}
+- Incorrect answers: ${relevantMemory.incorrect_answers ?? 0}
+- Accuracy: ${relevantMemory.accuracy ?? 0}%
+- Notes: ${relevantMemory.notes ?? "None"}
 `
       : `
 There is no previous learning history for this topic.
@@ -431,10 +374,9 @@ Return exactly this structure:
     if (!text) {
       return NextResponse.json(
         {
-          error:
-            "EduMate did not return a study response.",
+          error: "EduMate did not return a study response.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -443,38 +385,29 @@ Return exactly this structure:
     try {
       result = JSON.parse(text);
     } catch (error) {
-      console.error(
-        "Study Mode JSON parse error:",
-        error
-      );
+      console.error("Study Mode JSON parse error:", error);
 
       return NextResponse.json(
         {
-          error:
-            "EduMate returned an invalid study response.",
+          error: "EduMate returned an invalid study response.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // --------------------------------
     // 15. Validate response
     // --------------------------------
-    if (
-      typeof result !== "object" ||
-      result === null
-    ) {
+    if (typeof result !== "object" || result === null) {
       return NextResponse.json(
         {
-          error:
-            "EduMate returned an invalid study response.",
+          error: "EduMate returned an invalid study response.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
-    const parsed =
-      result as Partial<StudyModeResponse>;
+    const parsed = result as Partial<StudyModeResponse>;
 
     if (
       typeof parsed.explanation !== "string" ||
@@ -490,32 +423,25 @@ Return exactly this structure:
     ) {
       return NextResponse.json(
         {
-          error:
-            "EduMate returned an incomplete study response.",
+          error: "EduMate returned an incomplete study response.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const keyIdeas = parsed.keyIdeas
-      .filter(
-        (item): item is string =>
-          typeof item === "string"
-      )
+      .filter((item): item is string => typeof item === "string")
       .map((item) => item.trim())
       .filter(Boolean)
       .slice(0, 5)
-      .map((item) =>
-        item.slice(0, MAX_KEY_IDEA_LENGTH)
-      );
+      .map((item) => item.slice(0, MAX_KEY_IDEA_LENGTH));
 
     if (keyIdeas.length === 0) {
       return NextResponse.json(
         {
-          error:
-            "EduMate did not return any key ideas.",
+          error: "EduMate did not return any key ideas.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -523,13 +449,9 @@ Return exactly this structure:
       .trim()
       .slice(0, MAX_EXPLANATION_LENGTH);
 
-    const example = parsed.example
-      .trim()
-      .slice(0, MAX_EXAMPLE_LENGTH);
+    const example = parsed.example.trim().slice(0, MAX_EXAMPLE_LENGTH);
 
-    const question = parsed.question
-      .trim()
-      .slice(0, MAX_QUESTION_LENGTH);
+    const question = parsed.question.trim().slice(0, MAX_QUESTION_LENGTH);
 
     const correctAnswer = parsed.correctAnswer
       .trim()
@@ -539,50 +461,39 @@ Return exactly this structure:
       .trim()
       .slice(0, MAX_ENCOURAGEMENT_LENGTH);
 
-    if (
-      !explanation ||
-      !example ||
-      !question ||
-      !correctAnswer
-    ) {
+    if (!explanation || !example || !question || !correctAnswer) {
       return NextResponse.json(
         {
-          error:
-            "EduMate returned an incomplete study response.",
+          error: "EduMate returned an incomplete study response.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // --------------------------------
     // 16. Store the trusted answer server-side
     // --------------------------------
-    const { data: savedQuestion, error: saveError } =
-      await adminSupabase
-        .from("study_mode_questions")
-        .insert({
-          user_id: user.id,
-          topic,
-          subject,
-          grade,
-          question,
-          correct_answer: correctAnswer,
-        })
-        .select("id")
-        .single();
+    const { data: savedQuestion, error: saveError } = await adminSupabase
+      .from("study_mode_questions")
+      .insert({
+        user_id: user.id,
+        topic,
+        subject,
+        grade,
+        question,
+        correct_answer: correctAnswer,
+      })
+      .select("id")
+      .single();
 
     if (saveError || !savedQuestion) {
-      console.error(
-        "Failed to save Study Mode question:",
-        saveError
-      );
+      console.error("Failed to save Study Mode question:", saveError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to save the Study Mode question.",
+          error: "Failed to save the Study Mode question.",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -612,10 +523,9 @@ Return exactly this structure:
 
     return NextResponse.json(
       {
-        error:
-          "Failed to start Study Mode. Please try again.",
+        error: "Failed to start Study Mode. Please try again.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

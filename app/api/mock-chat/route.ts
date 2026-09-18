@@ -7,13 +7,9 @@ export async function POST(request: Request) {
 
     const question = body.question;
     const knowledgeContext =
-      body.knowledgeContext ??
-      "No relevant knowledge was found.";
+      body.knowledgeContext ?? "No relevant knowledge was found.";
 
-    if (
-      typeof question !== "string" ||
-      !question.trim()
-    ) {
+    if (typeof question !== "string" || !question.trim()) {
       return NextResponse.json(
         {
           error: "Question is required",
@@ -22,10 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = generateMockResponse(
-      question,
-      knowledgeContext,
-    );
+    const response = generateMockResponse(question, knowledgeContext);
 
     return NextResponse.json({
       response,

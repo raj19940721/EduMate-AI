@@ -1,16 +1,11 @@
-export type RetrievalRelevance =
-  | "high"
-  | "medium"
-  | "low";
+export type RetrievalRelevance = "high" | "medium" | "low";
 
 export interface RetrievalEvaluation {
   score: number;
   relevance: RetrievalRelevance;
 }
 
-export function evaluateRetrieval(
-  similarity: number,
-): RetrievalEvaluation {
+export function evaluateRetrieval(similarity: number): RetrievalEvaluation {
   if (similarity >= 0.7) {
     return {
       score: similarity,

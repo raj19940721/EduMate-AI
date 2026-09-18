@@ -15,10 +15,7 @@ export interface LearningMemory {
 
 export interface LearningRecommendation {
   topic: string;
-  action:
-    | "review"
-    | "practice"
-    | "next_topic";
+  action: "review" | "practice" | "next_topic";
   priority: "high" | "medium" | "low";
   reason: string;
 }
@@ -33,9 +30,7 @@ export async function generateLearningRecommendation(
   // ----------------------------------------
   // 1. Get today's date
   // ----------------------------------------
-  const today = new Date()
-    .toISOString()
-    .split("T")[0];
+  const today = new Date().toISOString().split("T")[0];
 
   // ----------------------------------------
   // 2. Calculate recommendation candidates
@@ -43,39 +38,22 @@ export async function generateLearningRecommendation(
   const candidates = memories
     .filter(
       (memory) =>
-        memory.topic &&
-        memory.topic.toLowerCase() !==
-          "general knowledge",
+        memory.topic && memory.topic.toLowerCase() !== "general knowledge",
     )
     .map((memory) => {
-      const accuracy = Number(
-        memory.accuracy ?? 0,
-      );
+      const accuracy = Number(memory.accuracy ?? 0);
 
-      const questionsAsked =
-        Number(
-          memory.questions_asked ?? 0,
-        );
+      const questionsAsked = Number(memory.questions_asked ?? 0);
 
-      const masteryLevel =
-        memory.mastery_level ?? "learning";
+      const masteryLevel = memory.mastery_level ?? "learning";
 
-      const nextReviewDate =
-        memory.next_review_date ?? null;
+      const nextReviewDate = memory.next_review_date ?? null;
 
-      const isDue =
-        nextReviewDate !== null &&
-        nextReviewDate <= today;
+      const isDue = nextReviewDate !== null && nextReviewDate <= today;
 
-      let action:
-        | "review"
-        | "practice"
-        | "next_topic";
+      let action: "review" | "practice" | "next_topic";
 
-      let priority:
-        | "high"
-        | "medium"
-        | "low";
+      let priority: "high" | "medium" | "low";
 
       let reason: string;
 
@@ -87,8 +65,7 @@ export async function generateLearningRecommendation(
         action = "review";
         priority = "high";
 
-        reason =
-          "This topic is due for review and your accuracy is below 50%.";
+        reason = "This topic is due for review and your accuracy is below 50%.";
       }
 
       // ----------------------------------------
@@ -99,8 +76,7 @@ export async function generateLearningRecommendation(
         action = "review";
         priority = "medium";
 
-        reason =
-          "This topic is due for review and needs more reinforcement.";
+        reason = "This topic is due for review and needs more reinforcement.";
       }
 
       // ----------------------------------------
@@ -131,10 +107,7 @@ export async function generateLearningRecommendation(
       // Priority 5:
       // Strong performance but not mastered
       // ----------------------------------------
-      else if (
-        accuracy >= 80 &&
-        masteryLevel !== "mastered"
-      ) {
+      else if (accuracy >= 80 && masteryLevel !== "mastered") {
         action = "practice";
         priority = "medium";
 
@@ -181,14 +154,8 @@ export async function generateLearningRecommendation(
 
   candidates.sort((a, b) => {
     // Highest priority first
-    if (
-      priorityRank[a.priority] !==
-      priorityRank[b.priority]
-    ) {
-      return (
-        priorityRank[a.priority] -
-        priorityRank[b.priority]
-      );
+    if (priorityRank[a.priority] !== priorityRank[b.priority]) {
+      return priorityRank[a.priority] - priorityRank[b.priority];
     }
 
     // Due topics first
@@ -202,10 +169,7 @@ export async function generateLearningRecommendation(
     }
 
     // More learning history first
-    return (
-      b.questionsAsked -
-      a.questionsAsked
-    );
+    return b.questionsAsked - a.questionsAsked;
   });
 
   const bestCandidate = candidates[0];
@@ -280,27 +244,24 @@ Return JSON only:
 `;
 
   try {
-    const response =
-      await ai.models.generateContent({
-        model: "gemini-3.5-flash-lite",
-        contents: prompt,
-        config: {
-          responseMimeType:
-            "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              reason: {
-                type: "string",
-              },
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            reason: {
+              type: "string",
             },
-            required: ["reason"],
           },
+          required: ["reason"],
         },
-      });
+      },
+    });
 
-    const text =
-      response.text?.trim();
+    const text = response.text?.trim();
 
     if (!text) {
       return {
@@ -311,17 +272,12 @@ Return JSON only:
       };
     }
 
-    const recommendation =
-      JSON.parse(text);
+    const recommendation = JSON.parse(text);
 
     // ----------------------------------------
     // 5. Validate Gemini reason
     // ----------------------------------------
-    if (
-      !recommendation.reason ||
-      typeof recommendation.reason !==
-        "string"
-    ) {
+    if (!recommendation.reason || typeof recommendation.reason !== "string") {
       return {
         topic: bestCandidate.memory.topic,
         action: bestCandidate.action,
@@ -340,10 +296,7 @@ Return JSON only:
       reason: recommendation.reason,
     };
   } catch (error) {
-    console.error(
-      "Learning recommendation AI error:",
-      error,
-    );
+    console.error("Learning recommendation AI error:", error);
 
     // ----------------------------------------
     // 7. Safe fallback

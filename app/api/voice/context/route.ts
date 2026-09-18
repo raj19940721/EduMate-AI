@@ -14,10 +14,7 @@ export async function POST(request: Request) {
 
     const question = body.question;
 
-    if (
-      typeof question !== "string" ||
-      !question.trim()
-    ) {
+    if (typeof question !== "string" || !question.trim()) {
       return new Response(
         JSON.stringify({
           error: "Voice question is required",
@@ -27,7 +24,7 @@ export async function POST(request: Request) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 
@@ -37,22 +34,20 @@ export async function POST(request: Request) {
     // 2. Guardrails
     // --------------------------------
 
-    const guardrailResult =
-      checkGuardrails(cleanQuestion);
+    const guardrailResult = checkGuardrails(cleanQuestion);
 
     if (!guardrailResult.allowed) {
       return new Response(
         JSON.stringify({
           error:
-            guardrailResult.message ??
-            "This question cannot be processed.",
+            guardrailResult.message ?? "This question cannot be processed.",
         }),
         {
           status: 400,
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 
@@ -60,8 +55,7 @@ export async function POST(request: Request) {
     // 3. Authenticate user
     // --------------------------------
 
-    const supabase =
-      await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const {
       data: { user },
@@ -78,7 +72,7 @@ export async function POST(request: Request) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 
@@ -86,18 +80,14 @@ export async function POST(request: Request) {
     // 4. Load student profile
     // --------------------------------
 
-    const { data: student, error: studentError } =
-      await adminSupabase
-        .from("students")
-        .select("name, grade, subject")
-        .eq("user_id", user.id)
-        .maybeSingle();
+    const { data: student, error: studentError } = await adminSupabase
+      .from("students")
+      .select("name, grade, subject")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
     if (studentError) {
-      console.error(
-        "Failed to load student profile:",
-        studentError
-      );
+      console.error("Failed to load student profile:", studentError);
 
       return new Response(
         JSON.stringify({
@@ -108,7 +98,7 @@ export async function POST(request: Request) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 
@@ -122,7 +112,7 @@ export async function POST(request: Request) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 
@@ -130,116 +120,81 @@ export async function POST(request: Request) {
     // 5. Load learning memory
     // --------------------------------
 
-    const {
-      data: learningMemories,
-      error: learningMemoryError,
-    } = await adminSupabase
-      .from("student_learning_memory")
-      .select(
-        "topic, subject, grade, mastery_level, notes, updated_at"
-      )
-      .eq("user_id", user.id)
-      .order("updated_at", {
-        ascending: false,
-      })
-      .limit(20);
+    const { data: learningMemories, error: learningMemoryError } =
+      await adminSupabase
+        .from("student_learning_memory")
+        .select("topic, subject, grade, mastery_level, notes, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", {
+          ascending: false,
+        })
+        .limit(20);
 
     if (learningMemoryError) {
-      console.error(
-        "Failed to load learning memory:",
-        learningMemoryError
-      );
+      console.error("Failed to load learning memory:", learningMemoryError);
     }
 
     // --------------------------------
     // 6. Generate embedding
     // --------------------------------
 
-    const queryEmbedding =
-      await generateEmbedding(
-        cleanQuestion
-      );
+    const queryEmbedding = await generateEmbedding(cleanQuestion);
 
-    console.log(
-      "Voice RAG embedding dimensions:",
-      queryEmbedding.length
-    );
+    console.log("Voice RAG embedding dimensions:", queryEmbedding.length);
 
     // --------------------------------
     // 7. Search knowledge base
     // --------------------------------
 
-    const {
-      data: knowledgeResults,
-      error: searchError,
-    } = await adminSupabase.rpc(
-      "match_knowledge_chunks",
-      {
-        query_embedding:
-          queryEmbedding,
+    const { data: knowledgeResults, error: searchError } =
+      await adminSupabase.rpc("match_knowledge_chunks", {
+        query_embedding: queryEmbedding,
 
         match_threshold: 0.3,
 
         match_count: 5,
 
-        match_grade:
-          student.grade,
+        match_grade: student.grade,
 
-        match_subject:
-          student.subject ?? null,
-      }
-    );
+        match_subject: student.subject ?? null,
+      });
 
     if (searchError) {
-      console.error(
-        "Voice knowledge search error:",
-        searchError
-      );
+      console.error("Voice knowledge search error:", searchError);
     }
 
-    const results =
-      knowledgeResults ?? [];
+    const results = knowledgeResults ?? [];
 
     // --------------------------------
     // 8. Evaluate RAG results
     // --------------------------------
 
-    const evaluatedResults =
-      results.map(
-        (result: {
-          content: string;
-          metadata: Record<
-            string,
-            unknown
-          >;
-          similarity: number;
-        }) => {
-          const evaluation =
-            evaluateRetrieval(
-              result.similarity
-            );
+    const evaluatedResults = results.map(
+      (result: {
+        content: string;
+        metadata: Record<string, unknown>;
+        similarity: number;
+      }) => {
+        const evaluation = evaluateRetrieval(result.similarity);
 
-          return {
-            ...result,
-            evaluation,
-          };
-        }
-      );
+        return {
+          ...result,
+          evaluation,
+        };
+      },
+    );
 
     // --------------------------------
     // 9. Only use HIGH relevance
     // --------------------------------
 
-    const relevantResults =
-      evaluatedResults.filter(
-        (result: {
-          evaluation: {
-            relevance: string;
-          };
-        }) =>
-          result.evaluation
-            .relevance === "high"
-      );
+    const relevantResults = evaluatedResults.filter(
+      (result: {
+        evaluation: {
+          relevance: string;
+        };
+      }) => result.evaluation.relevance === "high",
+    );
 
     // --------------------------------
     // 10. Build knowledge context
@@ -252,35 +207,27 @@ export async function POST(request: Request) {
               (
                 result: {
                   content: string;
-                  metadata: Record<
-                    string,
-                    unknown
-                  >;
+                  metadata: Record<string, unknown>;
                   similarity: number;
                   evaluation: {
                     score: number;
-                    relevance:
-                      | "high"
-                      | "medium"
-                      | "low";
+                    relevance: "high" | "medium" | "low";
                   };
                 },
-                index: number
+                index: number,
               ) => `
 Knowledge ${index + 1}:
 ${result.content}
 
 Metadata:
-${JSON.stringify(
-  result.metadata
-)}
+${JSON.stringify(result.metadata)}
 
 Similarity:
 ${result.similarity}
 
 Relevance:
 ${result.evaluation.relevance}
-`
+`,
             )
             .join("\n")
         : "No relevant knowledge was found.";
@@ -290,29 +237,17 @@ ${result.evaluation.relevance}
     // --------------------------------
 
     const learningMemoryContext =
-      learningMemories &&
-      learningMemories.length > 0
+      learningMemories && learningMemories.length > 0
         ? learningMemories
             .map(
               (memory, index) => `
 Learning Memory ${index + 1}:
 Topic: ${memory.topic}
-Subject: ${
-                memory.subject ??
-                "Unknown"
-              }
-Grade: ${
-                memory.grade ??
-                student.grade
-              }
-Mastery Level: ${
-                memory.mastery_level
-              }
-Notes: ${
-                memory.notes ??
-                "No notes"
-              }
-`
+Subject: ${memory.subject ?? "Unknown"}
+Grade: ${memory.grade ?? student.grade}
+Mastery Level: ${memory.mastery_level}
+Notes: ${memory.notes ?? "No notes"}
+`,
             )
             .join("\n")
         : "No previous learning memory available.";
@@ -334,19 +269,13 @@ Long-Term Learning Memory:
 ${learningMemoryContext}
 `;
 
-    console.log(
-      "Voice context created:",
-      {
-        question: cleanQuestion,
-        grade: student.grade,
-        subject:
-          student.subject ?? null,
-        ragResults:
-          relevantResults.length,
-        learningMemories:
-          learningMemories?.length ?? 0,
-      }
-    );
+    console.log("Voice context created:", {
+      question: cleanQuestion,
+      grade: student.grade,
+      subject: student.subject ?? null,
+      ragResults: relevantResults.length,
+      learningMemories: learningMemories?.length ?? 0,
+    });
 
     // --------------------------------
     // 13. Return context
@@ -363,45 +292,33 @@ ${learningMemoryContext}
         student: {
           name: student.name,
           grade: student.grade,
-          subject:
-            student.subject ?? null,
+          subject: student.subject ?? null,
         },
 
         rag: {
-          usedKnowledge:
-            relevantResults.length > 0,
+          usedKnowledge: relevantResults.length > 0,
 
-          resultCount:
-            results.length,
+          resultCount: results.length,
 
-          highRelevanceCount:
-            relevantResults.length,
+          highRelevanceCount: relevantResults.length,
 
-          topSimilarity:
-            evaluatedResults[0]
-              ?.similarity ?? null,
+          topSimilarity: evaluatedResults[0]?.similarity ?? null,
         },
 
         learningMemory: {
-          count:
-            learningMemories?.length ??
-            0,
+          count: learningMemories?.length ?? 0,
         },
       }),
       {
         status: 200,
 
         headers: {
-          "Content-Type":
-            "application/json",
+          "Content-Type": "application/json",
         },
-      }
+      },
     );
   } catch (error) {
-    console.error(
-      "Voice context error:",
-      error
-    );
+    console.error("Voice context error:", error);
 
     return new Response(
       JSON.stringify({
@@ -413,10 +330,9 @@ ${learningMemoryContext}
       {
         status: 500,
         headers: {
-          "Content-Type":
-            "application/json",
+          "Content-Type": "application/json",
         },
-      }
+      },
     );
   }
 }

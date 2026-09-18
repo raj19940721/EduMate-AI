@@ -101,15 +101,13 @@ export async function POST(request: Request) {
     // --------------------------------
     // Verify conversation belongs to current user
     // --------------------------------
-    const {
-      data: conversationOwner,
-      error: conversationOwnerError,
-    } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("id", conversationId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const { data: conversationOwner, error: conversationOwnerError } =
+      await supabase
+        .from("conversations")
+        .select("id")
+        .eq("id", conversationId)
+        .eq("user_id", user.id)
+        .maybeSingle();
 
     if (conversationOwnerError) {
       console.error(

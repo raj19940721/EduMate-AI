@@ -2,17 +2,12 @@ export function generateMockResponse(
   question: string,
   knowledgeContext: string,
 ): string {
-  if (
-    knowledgeContext !==
-    "No relevant knowledge was found."
-  ) {
-    const knowledgeMatch =
-      knowledgeContext.match(
-        /Knowledge \d+:\n([\s\S]*?)\n\nMetadata:/,
-      );
+  if (knowledgeContext !== "No relevant knowledge was found.") {
+    const knowledgeMatch = knowledgeContext.match(
+      /Knowledge \d+:\n([\s\S]*?)\n\nMetadata:/,
+    );
 
-    const knowledge =
-      knowledgeMatch?.[1]?.trim();
+    const knowledge = knowledgeMatch?.[1]?.trim();
 
     if (knowledge) {
       return `🌱 Here's what I can tell you:

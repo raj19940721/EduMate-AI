@@ -8,23 +8,18 @@ type RouteContext = {
   }>;
 };
 
-export async function PATCH(
-  request: Request,
-  context: RouteContext,
-) {
+export async function PATCH(request: Request, context: RouteContext) {
   try {
     // ----------------------------------------------
     // Authenticate user
     // ----------------------------------------------
 
-    const supabaseServer =
-      await createSupabaseServerClient();
+    const supabaseServer = await createSupabaseServerClient();
 
     const {
       data: { user },
       error: authError,
-    } =
-      await supabaseServer.auth.getUser();
+    } = await supabaseServer.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json(
@@ -48,8 +43,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Study plan activity ID is required.",
+          error: "Study plan activity ID is required.",
         },
         {
           status: 400,
@@ -71,8 +65,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Invalid request body.",
+          error: "Invalid request body.",
         },
         {
           status: 400,
@@ -80,18 +73,13 @@ export async function PATCH(
       );
     }
 
-    const status =
-      body.status?.trim();
+    const status = body.status?.trim();
 
-    if (
-      status !== "in_progress" &&
-      status !== "completed"
-    ) {
+    if (status !== "in_progress" && status !== "completed") {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Invalid study activity status.",
+          error: "Invalid study activity status.",
         },
         {
           status: 400,
@@ -111,8 +99,7 @@ export async function PATCH(
     };
 
     if (status === "completed") {
-      updateData.completed_at =
-        new Date().toISOString();
+      updateData.completed_at = new Date().toISOString();
     } else {
       updateData.completed_at = null;
     }
@@ -125,13 +112,8 @@ export async function PATCH(
     // study_plan_activities
     // ----------------------------------------------
 
-    const {
-      data: updatedActivity,
-      error: updateError,
-    } = await supabase
-      .from(
-        "study_plan_activities",
-      )
+    const { data: updatedActivity, error: updateError } = await supabase
+      .from("study_plan_activities")
       .update(updateData)
       .eq("id", id)
       .eq("user_id", user.id)
@@ -153,16 +135,12 @@ export async function PATCH(
       .maybeSingle();
 
     if (updateError) {
-      console.error(
-        "Study plan activity update error:",
-        updateError,
-      );
+      console.error("Study plan activity update error:", updateError);
 
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Failed to update study activity.",
+          error: "Failed to update study activity.",
         },
         {
           status: 500,
@@ -178,8 +156,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Study plan item not found.",
+          error: "Study plan item not found.",
         },
         {
           status: 404,
@@ -200,54 +177,36 @@ export async function PATCH(
           : "Study activity started.",
 
       studyPlan: {
-        id:
-          updatedActivity.id,
+        id: updatedActivity.id,
 
-        planId:
-          updatedActivity.plan_id,
+        planId: updatedActivity.plan_id,
 
-        topic:
-          updatedActivity.topic,
+        topic: updatedActivity.topic,
 
-        subject:
-          updatedActivity.subject,
+        subject: updatedActivity.subject,
 
-        activityType:
-          updatedActivity.activity_type,
+        activityType: updatedActivity.activity_type,
 
-        title:
-          updatedActivity.title,
+        title: updatedActivity.title,
 
-        description:
-          updatedActivity.description,
+        description: updatedActivity.description,
 
-        durationMinutes:
-          Number(
-            updatedActivity.estimated_minutes ??
-              0,
-          ),
+        durationMinutes: Number(updatedActivity.estimated_minutes ?? 0),
 
-        status:
-          updatedActivity.status,
+        status: updatedActivity.status,
 
-        scheduledDate:
-          updatedActivity.activity_date,
+        scheduledDate: updatedActivity.activity_date,
 
-        completedAt:
-          updatedActivity.completed_at,
+        completedAt: updatedActivity.completed_at,
       },
     });
   } catch (error) {
-    console.error(
-      "Study plan PATCH error:",
-      error,
-    );
+    console.error("Study plan PATCH error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error:
-          "Failed to update study activity.",
+        error: "Failed to update study activity.",
       },
       {
         status: 500,

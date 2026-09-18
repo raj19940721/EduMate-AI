@@ -53,8 +53,6 @@ export default function SmartReview() {
   const [topics, setTopics] = useState<ReviewTopic[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [expanded, setExpanded] = useState(false);
-
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [quizLoading, setQuizLoading] = useState(false);
 
@@ -152,7 +150,6 @@ export default function SmartReview() {
           topic: quiz.topic,
           question: quiz.question,
           studentAnswer: studentAnswer.trim(),
-          correctAnswer: quiz.correctAnswer,
         }),
       });
 
@@ -250,330 +247,285 @@ export default function SmartReview() {
 
   if (loading) {
     return (
-      <div className="border-b bg-white">
-        <div className="px-6 py-4 text-sm text-gray-500">
-          Loading smart review...
-        </div>
+      <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+        <div>Loading smart review...</div>
       </div>
     );
   }
 
   return (
-    <div className="border-b bg-white">
-      {/* --------------------------------------------------
-          Header
-      -------------------------------------------------- */}
-
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50"
-      >
+    <div className="w-full">
+      {topics.length === 0 ? (
+        <div className="rounded-2xl border border-green-100 bg-green-50 p-5 text-sm text-green-700">
+          <div className="font-semibold">🎉 You're all caught up!</div>
+          <div className="mt-1">No topics are due for review right now.</div>
+        </div>
+      ) : (
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">🔄</span>
-
-            <span className="font-semibold text-gray-800">Smart Review</span>
-
-            {topics.length > 0 && (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
-                {topics.length} due
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-slate-900">
+                Review topics that need attention
               </span>
-            )}
+              <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-600">
+                {topics.length} {topics.length === 1 ? "topic" : "topics"} due
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm text-slate-600">
+              Start with{" "}
+              <span className="font-semibold text-slate-700">
+                {topics[0].topic}
+              </span>
+            </p>
           </div>
 
-          {topics.length === 0 ? (
-            <p className="mt-1 text-xs text-green-600">
-              🎉 You're all caught up!
-            </p>
-          ) : (
-            <div className="mt-1">
-              <p className="text-xs font-medium text-gray-700">
-                {topics.length === 1
-                  ? "⚠️ 1 topic needs your attention"
-                  : `⚠️ ${topics.length} topics need your attention`}
-              </p>
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            {topics.map((topic) => (
+              <div
+                key={topic.id}
+                className="self-start rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+              >
+                {/* Topic header */}
 
-              <p className="mt-0.5 text-xs text-gray-500">
-                Start with{" "}
-                <span className="font-medium text-gray-700">
-                  {topics[0].topic}
-                </span>
-              </p>
-            </div>
-          )}
-        </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold text-gray-800">
+                      {topic.topic}
+                    </h3>
 
-        <span className="text-gray-400">{expanded ? "▲" : "▼"}</span>
-      </button>
+                    {topic.subject && (
+                      <p className="text-xs text-gray-500">
+                        {topic.subject}
+                        {topic.grade ? ` • Grade ${topic.grade}` : ""}
+                      </p>
+                    )}
 
-      {/* --------------------------------------------------
-          Content
-      -------------------------------------------------- */}
+                    <div className="mt-2">
+                      {(() => {
+                        const priorityStyle = getPriorityStyle(topic.priority);
 
-      {expanded && (
-        <div className="px-6 pb-5">
-          {topics.length === 0 ? (
-            <div className="rounded-lg bg-green-50 p-4 text-sm text-green-700">
-              <div className="font-semibold">🎉 You're all caught up!</div>
-
-              <div className="mt-1">
-                No topics are due for review right now.
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {topics.map((topic) => (
-                <div
-                  key={topic.id}
-                  className="rounded-lg border bg-gray-50 p-4"
-                >
-                  {/* Topic header */}
-
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">
-                        {topic.topic}
-                      </h3>
-
-                      {topic.subject && (
-                        <p className="text-xs text-gray-500">
-                          {topic.subject}
-                          {topic.grade ? ` • Grade ${topic.grade}` : ""}
-                        </p>
-                      )}
-
-                      <div className="mt-2">
-                        {(() => {
-                          const priorityStyle = getPriorityStyle(
-                            topic.priority,
-                          );
-
-                          return (
-                            <span
-                              className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${priorityStyle.className}`}
-                            >
-                              {priorityStyle.label}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </div>
-
-                    <span
-                      className={`text-sm font-semibold ${getAccuracyClass(
-                        topic.accuracy,
-                      )}`}
-                    >
-                      {topic.accuracy}%
-                    </span>
-                  </div>
-
-                  {/* Review status */}
-
-                  <div className="mt-3 text-sm text-gray-600">
-                    {getReviewMessage(topic)}
-                  </div>
-
-                  {/* Stats */}
-
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded bg-white p-2">
-                      <div className="text-sm font-semibold text-gray-800">
-                        {topic.questionsAsked}
-                      </div>
-
-                      <div className="text-[11px] text-gray-500">Questions</div>
-                    </div>
-
-                    <div className="rounded bg-white p-2">
-                      <div className="text-sm font-semibold text-gray-800">
-                        {topic.correctAnswers}
-                      </div>
-
-                      <div className="text-[11px] text-gray-500">Correct</div>
-                    </div>
-
-                    <div className="rounded bg-white p-2">
-                      <div className="text-sm font-semibold text-gray-800">
-                        {topic.reviewIntervalDays}d
-                      </div>
-
-                      <div className="text-[11px] text-gray-500">Interval</div>
+                        return (
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${priorityStyle.className}`}
+                          >
+                            {priorityStyle.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
 
-                  {/* Review date */}
-
-                  <div className="mt-3 text-xs text-gray-500">
-                    📅 Review date: {topic.nextReviewDate}
-                  </div>
-
-                  {/* Practice button */}
-
-                  <button
-                    onClick={() => startReview(topic.topic)}
-                    disabled={quizLoading}
-                    className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  <span
+                    className={`text-sm font-semibold ${getAccuracyClass(
+                      topic.accuracy,
+                    )}`}
                   >
-                    {quizLoading && selectedTopic === topic.topic
-                      ? "Generating..."
-                      : "🔄 Practice Now"}
-                  </button>
+                    {topic.accuracy}%
+                  </span>
+                </div>
 
-                  {/* --------------------------------------------------
+                {/* Review status */}
+
+                <div className="mt-3 text-sm text-gray-600">
+                  {getReviewMessage(topic)}
+                </div>
+
+                {/* Stats */}
+
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <div className="text-sm font-semibold text-gray-800">
+                      {topic.questionsAsked}
+                    </div>
+
+                    <div className="text-[11px] text-gray-500">Questions</div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <div className="text-sm font-semibold text-gray-800">
+                      {topic.correctAnswers}
+                    </div>
+
+                    <div className="text-[11px] text-gray-500">Correct</div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <div className="text-sm font-semibold text-gray-800">
+                      {topic.reviewIntervalDays}d
+                    </div>
+
+                    <div className="text-[11px] text-gray-500">Interval</div>
+                  </div>
+                </div>
+
+                {/* Review date */}
+
+                <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  📅 Review date: {topic.nextReviewDate}
+                </div>
+
+                {/* Practice button */}
+
+                <button
+                  type="button"
+                  onClick={() => startReview(topic.topic)}
+                  disabled={quizLoading}
+                  className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {quizLoading && selectedTopic === topic.topic
+                    ? "Generating..."
+                    : "🔄 Practice Now"}
+                </button>
+
+                {/* --------------------------------------------------
                       Generated Question
                   -------------------------------------------------- */}
 
-                  {selectedTopic === topic.topic && quiz && (
-                    <div className="mt-4 rounded-lg border bg-white p-4">
-                      <div className="text-xs font-semibold uppercase text-gray-500">
-                        Smart Review Question
-                      </div>
+                {selectedTopic === topic.topic && quiz && (
+                  <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-4">
+                    <div className="text-xs font-semibold uppercase text-gray-500">
+                      Smart Review Question
+                    </div>
 
-                      <div className="mt-2 text-base font-medium text-gray-800">
-                        {quiz.question}
-                      </div>
+                    <div className="mt-2 text-base font-medium text-gray-800">
+                      {quiz.question}
+                    </div>
 
-                      <div className="mt-2 text-xs text-gray-500">
-                        Difficulty: {quiz.difficulty}
-                      </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Difficulty: {quiz.difficulty}
+                    </div>
 
-                      {/* Answer input */}
+                    {/* Answer input */}
 
-                      <textarea
-                        value={studentAnswer}
-                        onChange={(event) =>
-                          setStudentAnswer(event.target.value)
-                        }
-                        placeholder="Type your answer here..."
-                        rows={3}
-                        className="mt-4 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      />
+                    <textarea
+                      value={studentAnswer}
+                      onChange={(event) => setStudentAnswer(event.target.value)}
+                      placeholder="Type your answer here..."
+                      rows={3}
+                      className="mt-4 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
 
-                      {/* Submit */}
+                    {/* Submit */}
 
-                      <button
-                        onClick={submitReviewAnswer}
-                        disabled={submitting || !studentAnswer.trim()}
-                        className="mt-3 w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {submitting ? "Checking Answer..." : "✅ Submit Answer"}
-                      </button>
+                    <button
+                      type="button"
+                      onClick={submitReviewAnswer}
+                      disabled={submitting || !studentAnswer.trim()}
+                      className="mt-3 w-full rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {submitting ? "Checking Answer..." : "✅ Submit Answer"}
+                    </button>
 
-                      {/* --------------------------------------------------
+                    {/* --------------------------------------------------
                             Result
                         -------------------------------------------------- */}
 
-                      {reviewResult && (
-                        <div className="mt-4 space-y-3">
-                          {/* Review completed */}
+                    {reviewResult && (
+                      <div className="mt-4 space-y-3">
+                        {/* Review completed */}
 
+                        <div
+                          className={`rounded-lg p-4 ${
+                            reviewResult.result.isCorrect
+                              ? "bg-green-50"
+                              : "bg-red-50"
+                          }`}
+                        >
                           <div
-                            className={`rounded-lg p-4 ${
+                            className={`font-semibold ${
                               reviewResult.result.isCorrect
-                                ? "bg-green-50"
-                                : "bg-red-50"
+                                ? "text-green-700"
+                                : "text-red-700"
                             }`}
                           >
-                            <div
-                              className={`font-semibold ${
-                                reviewResult.result.isCorrect
-                                  ? "text-green-700"
-                                  : "text-red-700"
-                              }`}
-                            >
-                              {reviewResult.result.isCorrect
-                                ? "🎉 Review completed!"
-                                : "📚 Review completed — keep practicing!"}
-                            </div>
-
-                            <p className="mt-1 text-sm text-gray-600">
-                              {quiz?.topic} has been reviewed successfully.
-                            </p>
-
-                            <div className="mt-3 text-sm text-gray-700">
-                              <span className="font-semibold">Score:</span>{" "}
-                              {reviewResult.result.score}%
-                            </div>
-
-                            <div className="mt-2 text-sm text-gray-700">
-                              {reviewResult.result.feedback}
-                            </div>
+                            {reviewResult.result.isCorrect
+                              ? "🎉 Review completed!"
+                              : "📚 Review completed — keep practicing!"}
                           </div>
 
-                          {/* Correct answer */}
+                          <p className="mt-1 text-sm text-gray-600">
+                            {quiz?.topic} has been reviewed successfully.
+                          </p>
 
-                          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                            <span className="font-semibold">
-                              Correct answer:
-                            </span>{" "}
-                            {reviewResult.result.correctAnswer}
+                          <div className="mt-3 text-sm text-gray-700">
+                            <span className="font-semibold">Score:</span>{" "}
+                            {reviewResult.result.score}%
                           </div>
 
-                          {/* Updated performance */}
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="rounded-lg bg-gray-50 p-3">
-                              <div className="text-xs text-gray-500">
-                                Accuracy
-                              </div>
-
-                              <div className="mt-1 font-semibold text-gray-800">
-                                {reviewResult.performance.accuracy}%
-                              </div>
-                            </div>
-
-                            <div className="rounded-lg bg-gray-50 p-3">
-                              <div className="text-xs text-gray-500">
-                                Mastery
-                              </div>
-
-                              <div className="mt-1 font-semibold capitalize text-gray-800">
-                                {reviewResult.performance.masteryLevel}
-                              </div>
-                            </div>
+                          <div className="mt-2 text-sm text-gray-700">
+                            {reviewResult.result.feedback}
                           </div>
-
-                          {/* Next review */}
-
-                          <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-700">
-                            <div className="font-semibold">🔄 Next review</div>
-
-                            <div className="mt-1">
-                              📅 {reviewResult.review.nextReviewDate}
-                            </div>
-
-                            <div className="mt-1 text-xs">
-                              Review interval:{" "}
-                              {reviewResult.review.reviewIntervalDays} day
-                              {reviewResult.review.reviewIntervalDays !== 1
-                                ? "s"
-                                : ""}
-                            </div>
-                          </div>
-
-                          {/* Start another review */}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setQuiz(null);
-                              setStudentAnswer("");
-                              setReviewResult(null);
-                              setSelectedTopic(null);
-                            }}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                          >
-                            🔄 Review Another Topic
-                          </button>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+
+                        {/* Correct answer */}
+
+                        <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+                          <span className="font-semibold">Correct answer:</span>{" "}
+                          {reviewResult.result.correctAnswer}
+                        </div>
+
+                        {/* Updated performance */}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <div className="text-xs text-gray-500">
+                              Accuracy
+                            </div>
+
+                            <div className="mt-1 font-semibold text-gray-800">
+                              {reviewResult.performance.accuracy}%
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <div className="text-xs text-gray-500">Mastery</div>
+
+                            <div className="mt-1 font-semibold capitalize text-gray-800">
+                              {reviewResult.performance.masteryLevel}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Next review */}
+
+                        <div className="rounded-lg bg-purple-50 p-4 text-sm text-purple-700">
+                          <div className="font-semibold">🔄 Next review</div>
+
+                          <div className="mt-1">
+                            📅 {reviewResult.review.nextReviewDate}
+                          </div>
+
+                          <div className="mt-1 text-xs">
+                            Review interval:{" "}
+                            {reviewResult.review.reviewIntervalDays} day
+                            {reviewResult.review.reviewIntervalDays !== 1
+                              ? "s"
+                              : ""}
+                          </div>
+                        </div>
+
+                        {/* Start another review */}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuiz(null);
+                            setStudentAnswer("");
+                            setReviewResult(null);
+                            setSelectedTopic(null);
+                          }}
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                          🔄 Review Another Topic
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

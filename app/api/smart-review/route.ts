@@ -16,28 +16,20 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // --------------------------------------------------
     // 2. Get today's date
     // --------------------------------------------------
 
-    const today = new Date()
-      .toISOString()
-      .split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
 
     // --------------------------------------------------
     // 3. Find topics due for review
     // --------------------------------------------------
 
-    const {
-      data: memories,
-      error: memoryError,
-    } = await adminSupabase
+    const { data: memories, error: memoryError } = await adminSupabase
       .from("student_learning_memory")
       .select(
         `
@@ -59,15 +51,11 @@ export async function GET() {
       .lte("next_review_date", today);
 
     if (memoryError) {
-      console.error(
-        "Smart review fetch error:",
-        memoryError,
-      );
+      console.error("Smart review fetch error:", memoryError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load smart review topics",
+          error: "Failed to load smart review topics",
           details: memoryError.message,
         },
         { status: 500 },
@@ -78,66 +66,52 @@ export async function GET() {
     // 4. Calculate priority
     // --------------------------------------------------
 
-    const reviewTopics = (memories ?? []).map(
-      (memory) => {
-        const accuracy = Number(
-          memory.accuracy ?? 0,
-        );
+    const reviewTopics = (memories ?? []).map((memory) => {
+      const accuracy = Number(memory.accuracy ?? 0);
 
-        let priority: number;
-        let priorityLabel: string;
+      let priority: number;
+      let priorityLabel: string;
 
-        if (accuracy < 50) {
-          priority = 1;
-          priorityLabel =
-            "Needs immediate attention";
-        } else if (accuracy < 70) {
-          priority = 2;
-          priorityLabel =
-            "Needs more practice";
-        } else if (accuracy < 90) {
-          priority = 3;
-          priorityLabel =
-            "Needs reinforcement";
-        } else {
-          priority = 4;
-          priorityLabel =
-            "Strong performance";
-        }
+      if (accuracy < 50) {
+        priority = 1;
+        priorityLabel = "Needs immediate attention";
+      } else if (accuracy < 70) {
+        priority = 2;
+        priorityLabel = "Needs more practice";
+      } else if (accuracy < 90) {
+        priority = 3;
+        priorityLabel = "Needs reinforcement";
+      } else {
+        priority = 4;
+        priorityLabel = "Strong performance";
+      }
 
-        return {
-          id: memory.id,
-          topic: memory.topic,
-          subject: memory.subject,
-          grade: memory.grade,
+      return {
+        id: memory.id,
+        topic: memory.topic,
+        subject: memory.subject,
+        grade: memory.grade,
 
-          masteryLevel:
-            memory.mastery_level,
+        masteryLevel: memory.mastery_level,
 
-          questionsAsked:
-            memory.questions_asked ?? 0,
+        questionsAsked: memory.questions_asked ?? 0,
 
-          correctAnswers:
-            memory.correct_answers ?? 0,
+        correctAnswers: memory.correct_answers ?? 0,
 
-          incorrectAnswers:
-            memory.incorrect_answers ?? 0,
+        incorrectAnswers: memory.incorrect_answers ?? 0,
 
-          accuracy,
+        accuracy,
 
-          nextReviewDate:
-            memory.next_review_date,
+        nextReviewDate: memory.next_review_date,
 
-          reviewIntervalDays:
-            memory.review_interval_days ?? 1,
+        reviewIntervalDays: memory.review_interval_days ?? 1,
 
-          isDue: true,
+        isDue: true,
 
-          priority,
-          priorityLabel,
-        };
-      },
-    );
+        priority,
+        priorityLabel,
+      };
+    });
 
     // --------------------------------------------------
     // 5. Sort by priority
@@ -150,13 +124,8 @@ export async function GET() {
       }
 
       // Second: earliest review date
-      if (
-        a.nextReviewDate !==
-        b.nextReviewDate
-      ) {
-        return a.nextReviewDate.localeCompare(
-          b.nextReviewDate,
-        );
+      if (a.nextReviewDate !== b.nextReviewDate) {
+        return a.nextReviewDate.localeCompare(b.nextReviewDate);
       }
 
       // Third: lower accuracy
@@ -177,19 +146,12 @@ export async function GET() {
       reviewTopics,
     });
   } catch (error) {
-    console.error(
-      "Smart review API error:",
-      error,
-    );
+    console.error("Smart review API error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to process smart review",
-        details:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
+        error: "Failed to process smart review",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     );

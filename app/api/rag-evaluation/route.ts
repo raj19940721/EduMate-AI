@@ -6,8 +6,7 @@ export async function GET() {
     // --------------------------------
     // Create authenticated Supabase client
     // --------------------------------
-    const supabase =
-      await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     // --------------------------------
     // Get authenticated user
@@ -31,10 +30,7 @@ export async function GET() {
     // --------------------------------
     // Get evaluations
     // --------------------------------
-    const {
-      data: evaluations,
-      error,
-    } = await supabase
+    const { data: evaluations, error } = await supabase
       .from("rag_evaluations")
       .select(
         "id, question, grade, subject, result_count, top_similarity, relevance, created_at",
@@ -45,15 +41,11 @@ export async function GET() {
       });
 
     if (error) {
-      console.error(
-        "Failed to load RAG evaluations:",
-        error,
-      );
+      console.error("Failed to load RAG evaluations:", error);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load RAG evaluations",
+          error: "Failed to load RAG evaluations",
         },
         {
           status: 500,
@@ -82,17 +74,12 @@ export async function GET() {
 
     const similarityValues = results
       .map((item) => item.top_similarity)
-      .filter(
-        (value): value is number =>
-          typeof value === "number",
-      );
+      .filter((value): value is number => typeof value === "number");
 
     const averageSimilarity =
       similarityValues.length > 0
-        ? similarityValues.reduce(
-            (sum, value) => sum + value,
-            0,
-          ) / similarityValues.length
+        ? similarityValues.reduce((sum, value) => sum + value, 0) /
+          similarityValues.length
         : 0;
 
     return NextResponse.json({
@@ -106,15 +93,11 @@ export async function GET() {
       evaluations: results,
     });
   } catch (error) {
-    console.error(
-      "RAG evaluation API error:",
-      error,
-    );
+    console.error("RAG evaluation API error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to load RAG evaluation data",
+        error: "Failed to load RAG evaluation data",
       },
       {
         status: 500,

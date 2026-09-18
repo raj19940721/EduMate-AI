@@ -14,8 +14,7 @@ export async function POST(request: Request) {
     // 1. Authenticate student
     // ----------------------------------------
 
-    const supabase =
-      await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const {
       data: { user },
@@ -37,8 +36,7 @@ export async function POST(request: Request) {
     // 2. Read request body
     // ----------------------------------------
 
-    const body =
-      await request.json().catch(() => null);
+    const body = await request.json().catch(() => null);
 
     if (!body) {
       return NextResponse.json(
@@ -52,23 +50,13 @@ export async function POST(request: Request) {
     }
 
     const question =
-      typeof body?.question === "string"
-        ? body.question.trim()
-        : "";
+      typeof body?.question === "string" ? body.question.trim() : "";
 
     const requestedSubject =
-      typeof body?.subject === "string"
-        ? body.subject.trim()
-        : "";
+      typeof body?.subject === "string" ? body.subject.trim() : "";
 
-    const mode:
-      | "explain"
-      | "hint"
-      | "check" =
-      body?.mode === "hint" ||
-      body?.mode === "check"
-        ? body.mode
-        : "explain";
+    const mode: "explain" | "hint" | "check" =
+      body?.mode === "hint" || body?.mode === "check" ? body.mode : "explain";
 
     // ----------------------------------------
     // 3. Validate input
@@ -77,8 +65,7 @@ export async function POST(request: Request) {
     if (!question) {
       return NextResponse.json(
         {
-          error:
-            "Please provide a homework question.",
+          error: "Please provide a homework question.",
         },
         {
           status: 400,
@@ -86,14 +73,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      question.length >
-      MAX_QUESTION_LENGTH
-    ) {
+    if (question.length > MAX_QUESTION_LENGTH) {
       return NextResponse.json(
         {
-          error:
-            "Homework question is too long.",
+          error: "Homework question is too long.",
         },
         {
           status: 400,
@@ -101,14 +84,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      requestedSubject.length >
-      MAX_SUBJECT_LENGTH
-    ) {
+    if (requestedSubject.length > MAX_SUBJECT_LENGTH) {
       return NextResponse.json(
         {
-          error:
-            "Subject is too long.",
+          error: "Subject is too long.",
         },
         {
           status: 400,
@@ -120,27 +99,18 @@ export async function POST(request: Request) {
     // 4. Load authenticated student's profile
     // ----------------------------------------
 
-    const {
-      data: student,
-      error: studentError,
-    } = await adminSupabase
+    const { data: student, error: studentError } = await adminSupabase
       .from("students")
-      .select(
-        "id, user_id, name, grade, age",
-      )
+      .select("id, user_id, name, grade, age")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (studentError) {
-      console.error(
-        "Homework student profile fetch error:",
-        studentError,
-      );
+      console.error("Homework student profile fetch error:", studentError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load student profile.",
+          error: "Failed to load student profile.",
         },
         {
           status: 500,
@@ -151,8 +121,7 @@ export async function POST(request: Request) {
     if (!student) {
       return NextResponse.json(
         {
-          error:
-            "Student profile not found.",
+          error: "Student profile not found.",
         },
         {
           status: 404,
@@ -165,9 +134,7 @@ export async function POST(request: Request) {
     // ----------------------------------------
 
     const studentGrade =
-      typeof student.grade === "number"
-        ? student.grade
-        : null;
+      typeof student.grade === "number" ? student.grade : null;
 
     if (
       studentGrade === null ||
@@ -175,15 +142,11 @@ export async function POST(request: Request) {
       studentGrade < 1 ||
       studentGrade > 12
     ) {
-      console.error(
-        "Invalid student grade:",
-        student.grade,
-      );
+      console.error("Invalid student grade:", student.grade);
 
       return NextResponse.json(
         {
-          error:
-            "Student profile has an invalid grade.",
+          error: "Student profile has an invalid grade.",
         },
         {
           status: 400,
@@ -195,17 +158,14 @@ export async function POST(request: Request) {
     // 6. Run guardrails
     // ----------------------------------------
 
-    const guardrailResult =
-      checkGuardrails(question);
+    const guardrailResult = checkGuardrails(question);
 
     if (!guardrailResult.allowed) {
       return NextResponse.json(
         {
           success: false,
           blocked: true,
-          message:
-            guardrailResult.message ??
-            "I can't help with that request.",
+          message: guardrailResult.message ?? "I can't help with that request.",
         },
         {
           status: 400,
@@ -220,15 +180,10 @@ export async function POST(request: Request) {
     let context = "";
 
     try {
-      const embedding =
-        await generateEmbedding(question);
+      const embedding = await generateEmbedding(question);
 
-      const {
-        data: knowledgeChunks,
-        error: searchError,
-      } = await adminSupabase.rpc(
-        "match_knowledge_chunks",
-        {
+      const { data: knowledgeChunks, error: searchError } =
+        await adminSupabase.rpc("match_knowledge_chunks", {
           query_embedding: embedding,
           match_threshold: 0.7,
           match_count: 5,
@@ -239,31 +194,18 @@ export async function POST(request: Request) {
           match_grade: studentGrade,
 
           // Subject may be selected by student.
-          match_subject:
-            requestedSubject || null,
-        },
-      );
+          match_subject: requestedSubject || null,
+        });
 
       if (searchError) {
-        console.error(
-          "Homework knowledge search error:",
-          searchError,
-        );
+        console.error("Homework knowledge search error:", searchError);
       }
 
-      if (
-        Array.isArray(knowledgeChunks) &&
-        knowledgeChunks.length > 0
-      ) {
+      if (Array.isArray(knowledgeChunks) && knowledgeChunks.length > 0) {
         context = knowledgeChunks
           .filter(
-            (
-              chunk: {
-                content?: unknown;
-              },
-            ) =>
-              typeof chunk.content ===
-                "string" &&
+            (chunk: { content?: unknown }) =>
+              typeof chunk.content === "string" &&
               chunk.content.trim().length > 0,
           )
           .map(
@@ -272,16 +214,12 @@ export async function POST(request: Request) {
                 content: string;
               },
               index: number,
-            ) =>
-              `Knowledge ${index + 1}:\n${chunk.content}`,
+            ) => `Knowledge ${index + 1}:\n${chunk.content}`,
           )
           .join("\n\n");
       }
     } catch (error) {
-      console.error(
-        "Homework RAG error:",
-        error,
-      );
+      console.error("Homework RAG error:", error);
 
       // Homework remains available even
       // when retrieval temporarily fails.
@@ -408,74 +346,69 @@ Return exactly this structure:
     // 10. Generate AI response
     // ----------------------------------------
 
-    const response =
-      await ai.models.generateContent({
-        model:
-          "gemini-3.5-flash-lite",
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
 
-        contents: prompt,
+      contents: prompt,
 
-        config: {
-          responseMimeType:
-            "application/json",
+      config: {
+        responseMimeType: "application/json",
 
-          responseSchema: {
-            type: "object",
+        responseSchema: {
+          type: "object",
 
-            properties: {
-              subject: {
-                type: "string",
-              },
+          properties: {
+            subject: {
+              type: "string",
+            },
 
-              topic: {
-                type: "string",
-              },
+            topic: {
+              type: "string",
+            },
 
-              explanation: {
-                type: "string",
-              },
+            explanation: {
+              type: "string",
+            },
 
-              steps: {
-                type: "array",
+            steps: {
+              type: "array",
 
-                items: {
-                  type: "string",
-                },
-              },
-
-              finalAnswer: {
-                type: "string",
-              },
-
-              hint: {
+              items: {
                 type: "string",
               },
             },
 
-            required: [
-              "subject",
-              "topic",
-              "explanation",
-              "steps",
-              "finalAnswer",
-              "hint",
-            ],
+            finalAnswer: {
+              type: "string",
+            },
+
+            hint: {
+              type: "string",
+            },
           },
+
+          required: [
+            "subject",
+            "topic",
+            "explanation",
+            "steps",
+            "finalAnswer",
+            "hint",
+          ],
         },
-      });
+      },
+    });
 
     // ----------------------------------------
     // 11. Parse AI response
     // ----------------------------------------
 
-    const text =
-      response.text?.trim();
+    const text = response.text?.trim();
 
     if (!text) {
       return NextResponse.json(
         {
-          error:
-            "Failed to generate homework help.",
+          error: "Failed to generate homework help.",
         },
         {
           status: 500,
@@ -495,15 +428,11 @@ Return exactly this structure:
     try {
       result = JSON.parse(text);
     } catch (parseError) {
-      console.error(
-        "Homework JSON parse error:",
-        parseError,
-      );
+      console.error("Homework JSON parse error:", parseError);
 
       return NextResponse.json(
         {
-          error:
-            "AI returned an invalid homework response.",
+          error: "AI returned an invalid homework response.",
         },
         {
           status: 500,
@@ -516,29 +445,19 @@ Return exactly this structure:
     // ----------------------------------------
 
     if (
-      typeof result.subject !==
-        "string" ||
+      typeof result.subject !== "string" ||
       typeof result.topic !== "string" ||
-      typeof result.explanation !==
-        "string" ||
+      typeof result.explanation !== "string" ||
       !Array.isArray(result.steps) ||
-      !result.steps.every(
-        (step) =>
-          typeof step === "string",
-      ) ||
-      typeof result.finalAnswer !==
-        "string" ||
+      !result.steps.every((step) => typeof step === "string") ||
+      typeof result.finalAnswer !== "string" ||
       typeof result.hint !== "string"
     ) {
-      console.error(
-        "Incomplete homework AI response:",
-        result,
-      );
+      console.error("Incomplete homework AI response:", result);
 
       return NextResponse.json(
         {
-          error:
-            "AI returned an incomplete homework response.",
+          error: "AI returned an incomplete homework response.",
         },
         {
           status: 500,
@@ -554,24 +473,17 @@ Return exactly this structure:
       success: true,
 
       homework: {
-        subject:
-          result.subject.trim(),
+        subject: result.subject.trim(),
 
-        topic:
-          result.topic.trim(),
+        topic: result.topic.trim(),
 
-        explanation:
-          result.explanation.trim(),
+        explanation: result.explanation.trim(),
 
-        steps: result.steps.map(
-          (step) => step.trim(),
-        ),
+        steps: result.steps.map((step) => step.trim()),
 
-        finalAnswer:
-          result.finalAnswer.trim(),
+        finalAnswer: result.finalAnswer.trim(),
 
-        hint:
-          result.hint.trim(),
+        hint: result.hint.trim(),
       },
 
       metadata: {
@@ -579,20 +491,15 @@ Return exactly this structure:
 
         grade: studentGrade,
 
-        usedKnowledge:
-          context.length > 0,
+        usedKnowledge: context.length > 0,
       },
     });
   } catch (error) {
-    console.error(
-      "Homework API error:",
-      error,
-    );
+    console.error("Homework API error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to process homework question.",
+        error: "Failed to process homework question.",
       },
       {
         status: 500,

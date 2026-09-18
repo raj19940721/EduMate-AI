@@ -21,19 +21,15 @@ export async function saveLearningMemory({
   // Check if this topic already exists
   // for this student
   // --------------------------------
-  const { data: existingMemory, error: findError } =
-    await supabase
-      .from("student_learning_memory")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("topic", topic)
-      .maybeSingle();
+  const { data: existingMemory, error: findError } = await supabase
+    .from("student_learning_memory")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("topic", topic)
+    .maybeSingle();
 
   if (findError) {
-    console.error(
-      "Failed to find existing learning memory:",
-      findError,
-    );
+    console.error("Failed to find existing learning memory:", findError);
 
     throw findError;
   }
@@ -57,18 +53,12 @@ export async function saveLearningMemory({
       .single();
 
     if (error) {
-      console.error(
-        "Failed to update learning memory:",
-        error,
-      );
+      console.error("Failed to update learning memory:", error);
 
       throw error;
     }
 
-    console.log(
-      "Learning memory updated:",
-      data,
-    );
+    console.log("Learning memory updated:", data);
 
     return data;
   }
@@ -90,18 +80,12 @@ export async function saveLearningMemory({
     .single();
 
   if (error) {
-    console.error(
-      "Failed to save learning memory:",
-      error,
-    );
+    console.error("Failed to save learning memory:", error);
 
     throw error;
   }
 
-  console.log(
-    "New learning memory created:",
-    data,
-  );
+  console.log("New learning memory created:", data);
 
   return data;
 }

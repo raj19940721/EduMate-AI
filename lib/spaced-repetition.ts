@@ -26,13 +26,9 @@ export function calculateReviewSchedule({
 
   const nextReview = new Date();
 
-  nextReview.setDate(
-    nextReview.getDate() + intervalDays,
-  );
+  nextReview.setDate(nextReview.getDate() + intervalDays);
 
-  const nextReviewDate = nextReview
-    .toISOString()
-    .split("T")[0];
+  const nextReviewDate = nextReview.toISOString().split("T")[0];
 
   return {
     nextReviewDate,

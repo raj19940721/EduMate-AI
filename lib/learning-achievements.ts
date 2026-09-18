@@ -38,8 +38,7 @@ const ACHIEVEMENTS: LearningAchievement[] = [
   {
     achievementKey: "topic_master",
     achievementName: "Topic Master",
-    description:
-      "Master at least one topic with strong performance.",
+    description: "Master at least one topic with strong performance.",
   },
 ];
 
@@ -61,8 +60,7 @@ export async function checkAndAwardAchievements({
   if (questionsAnswered >= 1) {
     shouldEarn.push(
       ACHIEVEMENTS.find(
-        (achievement) =>
-          achievement.achievementKey === "first_quiz",
+        (achievement) => achievement.achievementKey === "first_quiz",
       )!,
     );
   }
@@ -74,8 +72,7 @@ export async function checkAndAwardAchievements({
   if (questionsAnswered >= 10) {
     shouldEarn.push(
       ACHIEVEMENTS.find(
-        (achievement) =>
-          achievement.achievementKey === "quiz_10",
+        (achievement) => achievement.achievementKey === "quiz_10",
       )!,
     );
   }
@@ -87,8 +84,7 @@ export async function checkAndAwardAchievements({
   if (currentStreak >= 3) {
     shouldEarn.push(
       ACHIEVEMENTS.find(
-        (achievement) =>
-          achievement.achievementKey === "streak_3",
+        (achievement) => achievement.achievementKey === "streak_3",
       )!,
     );
   }
@@ -100,8 +96,7 @@ export async function checkAndAwardAchievements({
   if (dailyGoalCompleted) {
     shouldEarn.push(
       ACHIEVEMENTS.find(
-        (achievement) =>
-          achievement.achievementKey === "daily_goal",
+        (achievement) => achievement.achievementKey === "daily_goal",
       )!,
     );
   }
@@ -113,8 +108,7 @@ export async function checkAndAwardAchievements({
   if (masteredTopics >= 1) {
     shouldEarn.push(
       ACHIEVEMENTS.find(
-        (achievement) =>
-          achievement.achievementKey === "topic_master",
+        (achievement) => achievement.achievementKey === "topic_master",
       )!,
     );
   }
@@ -123,11 +117,10 @@ export async function checkAndAwardAchievements({
   // 6. Check existing achievements
   // --------------------------------------------------
 
-  const { data: existingAchievements, error: fetchError } =
-    await adminSupabase
-      .from("learning_achievements")
-      .select("achievement_key")
-      .eq("user_id", userId);
+  const { data: existingAchievements, error: fetchError } = await adminSupabase
+    .from("learning_achievements")
+    .select("achievement_key")
+    .eq("user_id", userId);
 
   if (fetchError) {
     throw fetchError;
@@ -135,8 +128,7 @@ export async function checkAndAwardAchievements({
 
   const existingKeys = new Set(
     (existingAchievements ?? []).map(
-      (achievement) =>
-        achievement.achievement_key,
+      (achievement) => achievement.achievement_key,
     ),
   );
 
@@ -149,18 +141,14 @@ export async function checkAndAwardAchievements({
       continue;
     }
 
-    const { error: insertError } =
-      await adminSupabase
-        .from("learning_achievements")
-        .insert({
-          user_id: userId,
-          achievement_key:
-            achievement.achievementKey,
-          achievement_name:
-            achievement.achievementName,
-          description:
-            achievement.description,
-        });
+    const { error: insertError } = await adminSupabase
+      .from("learning_achievements")
+      .insert({
+        user_id: userId,
+        achievement_key: achievement.achievementKey,
+        achievement_name: achievement.achievementName,
+        description: achievement.description,
+      });
 
     if (insertError) {
       throw insertError;

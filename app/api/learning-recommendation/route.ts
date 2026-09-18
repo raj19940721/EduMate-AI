@@ -16,20 +16,16 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // ----------------------------------------
     // 2. Load student's learning memory
     // ----------------------------------------
-    const { data: memories, error: memoryError } =
-      await adminSupabase
-        .from("student_learning_memory")
-        .select(
-          `
+    const { data: memories, error: memoryError } = await adminSupabase
+      .from("student_learning_memory")
+      .select(
+        `
           topic,
           subject,
           questions_asked,
@@ -39,23 +35,19 @@ export async function GET() {
           mastery_level,
           notes
           `,
-        )
-        .eq("user_id", user.id)
-        .order("updated_at", {
-          ascending: false,
-        })
-        .limit(20);
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", {
+        ascending: false,
+      })
+      .limit(20);
 
     if (memoryError) {
-      console.error(
-        "Failed to load learning memories:",
-        memoryError,
-      );
+      console.error("Failed to load learning memories:", memoryError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load learning memories",
+          error: "Failed to load learning memories",
         },
         { status: 500 },
       );
@@ -68,18 +60,14 @@ export async function GET() {
       return NextResponse.json({
         success: true,
         recommendation: null,
-        message:
-          "No learning data available yet.",
+        message: "No learning data available yet.",
       });
     }
 
     // ----------------------------------------
     // 4. Generate AI recommendation
     // ----------------------------------------
-    const recommendation =
-      await generateLearningRecommendation(
-        memories,
-      );
+    const recommendation = await generateLearningRecommendation(memories);
 
     // ----------------------------------------
     // 5. Return recommendation
@@ -89,15 +77,11 @@ export async function GET() {
       recommendation,
     });
   } catch (error) {
-    console.error(
-      "Learning recommendation API error:",
-      error,
-    );
+    console.error("Learning recommendation API error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to generate learning recommendation",
+        error: "Failed to generate learning recommendation",
       },
       { status: 500 },
     );

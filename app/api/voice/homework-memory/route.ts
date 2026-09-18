@@ -12,33 +12,20 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json().catch(() => null);
 
     const question =
-      typeof body?.question === "string"
-        ? body.question.trim()
-        : "";
+      typeof body?.question === "string" ? body.question.trim() : "";
 
-    const topic =
-      typeof body?.topic === "string"
-        ? body.topic.trim()
-        : "";
+    const topic = typeof body?.topic === "string" ? body.topic.trim() : "";
 
     const subject =
-      typeof body?.subject === "string"
-        ? body.subject.trim()
-        : null;
+      typeof body?.subject === "string" ? body.subject.trim() : null;
 
-    const notes =
-      typeof body?.notes === "string"
-        ? body.notes.trim()
-        : null;
+    const notes = typeof body?.notes === "string" ? body.notes.trim() : null;
 
     if (!question) {
       return NextResponse.json(
@@ -53,20 +40,14 @@ export async function POST(request: Request) {
     // Get authenticated student's profile
     // ----------------------------------------
 
-    const {
-      data: student,
-      error: studentError,
-    } = await supabase
+    const { data: student, error: studentError } = await supabase
       .from("students")
       .select("grade, subject")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (studentError) {
-      console.error(
-        "Failed to load student profile:",
-        studentError,
-      );
+      console.error("Failed to load student profile:", studentError);
 
       return NextResponse.json(
         {
@@ -92,40 +73,26 @@ export async function POST(request: Request) {
     const memory = await saveLearningMemory({
       userId: user.id,
 
-      topic:
-        topic || question,
+      topic: topic || question,
 
-      subject:
-        subject ||
-        student.subject ||
-        null,
+      subject: subject || student.subject || null,
 
-      grade:
-        typeof student.grade === "number"
-          ? student.grade
-          : null,
+      grade: typeof student.grade === "number" ? student.grade : null,
 
       masteryLevel: "learning",
 
       notes:
-        notes ||
-        `Student received voice homework help. Question: ${question}`,
+        notes || `Student received voice homework help. Question: ${question}`,
     });
 
-    console.log(
-      "🧠 Voice homework learning memory saved:",
-      memory,
-    );
+    console.log("🧠 Voice homework learning memory saved:", memory);
 
     return NextResponse.json({
       success: true,
       memory,
     });
   } catch (error) {
-    console.error(
-      "Voice homework memory error:",
-      error,
-    );
+    console.error("Voice homework memory error:", error);
 
     return NextResponse.json(
       {

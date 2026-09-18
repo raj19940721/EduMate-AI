@@ -22,8 +22,7 @@ export async function POST(request: Request) {
     // 1. Authentication
     // --------------------------------
 
-    const supabase =
-      await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const {
       data: { user },
@@ -45,16 +44,14 @@ export async function POST(request: Request) {
     // 2. Read uploaded file
     // --------------------------------
 
-    const formData =
-      await request.formData();
+    const formData = await request.formData();
 
     const file = formData.get("image");
 
     if (!(file instanceof File)) {
       return NextResponse.json(
         {
-          error:
-            "Please upload a homework image.",
+          error: "Please upload a homework image.",
         },
         {
           status: 400,
@@ -69,8 +66,7 @@ export async function POST(request: Request) {
     if (file.size <= 0) {
       return NextResponse.json(
         {
-          error:
-            "The uploaded image is empty.",
+          error: "The uploaded image is empty.",
         },
         {
           status: 400,
@@ -78,13 +74,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      !ALLOWED_IMAGE_TYPES.has(file.type)
-    ) {
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
       return NextResponse.json(
         {
-          error:
-            "Only JPG, PNG, WEBP, or GIF images are supported.",
+          error: "Only JPG, PNG, WEBP, or GIF images are supported.",
         },
         {
           status: 400,
@@ -108,19 +101,16 @@ export async function POST(request: Request) {
     // 4. Guardrails
     // --------------------------------
 
-    const guardrailResult =
-      checkGuardrails(
-        "Read and extract the homework question from this uploaded image.",
-      );
+    const guardrailResult = checkGuardrails(
+      "Read and extract the homework question from this uploaded image.",
+    );
 
     if (!guardrailResult.allowed) {
       return NextResponse.json(
         {
           success: false,
           blocked: true,
-          message:
-            guardrailResult.message ??
-            "I can't help with that request.",
+          message: guardrailResult.message ?? "I can't help with that request.",
         },
         {
           status: 400,
@@ -132,13 +122,9 @@ export async function POST(request: Request) {
     // 5. Convert image to Base64
     // --------------------------------
 
-    const arrayBuffer =
-      await file.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer();
 
-    const base64Image =
-      Buffer.from(arrayBuffer).toString(
-        "base64",
-      );
+    const base64Image = Buffer.from(arrayBuffer).toString("base64");
 
     // --------------------------------
     // 6. Build extraction prompt
@@ -201,74 +187,64 @@ Return exactly this structure:
     // 7. Ask Gemini to read image
     // --------------------------------
 
-    const response =
-      await ai.models.generateContent({
-        model:
-          "gemini-3.5-flash-lite",
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
 
-        contents: [
-          {
-            inlineData: {
-              mimeType: file.type,
-              data: base64Image,
-            },
-          },
-          {
-            text: prompt,
-          },
-        ],
-
-        config: {
-          responseMimeType:
-            "application/json",
-
-          responseSchema: {
-            type: "object",
-
-            properties: {
-              subject: {
-                type: "string",
-              },
-
-              questions: {
-                type: "array",
-
-                items: {
-                  type: "string",
-                },
-              },
-
-              imageClear: {
-                type: "boolean",
-              },
-
-              message: {
-                type: "string",
-              },
-            },
-
-            required: [
-              "subject",
-              "questions",
-              "imageClear",
-              "message",
-            ],
+      contents: [
+        {
+          inlineData: {
+            mimeType: file.type,
+            data: base64Image,
           },
         },
-      });
+        {
+          text: prompt,
+        },
+      ],
+
+      config: {
+        responseMimeType: "application/json",
+
+        responseSchema: {
+          type: "object",
+
+          properties: {
+            subject: {
+              type: "string",
+            },
+
+            questions: {
+              type: "array",
+
+              items: {
+                type: "string",
+              },
+            },
+
+            imageClear: {
+              type: "boolean",
+            },
+
+            message: {
+              type: "string",
+            },
+          },
+
+          required: ["subject", "questions", "imageClear", "message"],
+        },
+      },
+    });
 
     // --------------------------------
     // 8. Parse Gemini response
     // --------------------------------
 
-    const text =
-      response.text?.trim();
+    const text = response.text?.trim();
 
     if (!text) {
       return NextResponse.json(
         {
-          error:
-            "Gemini did not return a response.",
+          error: "Gemini did not return a response.",
         },
         {
           status: 500,
@@ -286,15 +262,11 @@ Return exactly this structure:
     try {
       result = JSON.parse(text);
     } catch (parseError) {
-      console.error(
-        "Homework image JSON parse error:",
-        parseError,
-      );
+      console.error("Homework image JSON parse error:", parseError);
 
       return NextResponse.json(
         {
-          error:
-            "AI returned an invalid image extraction response.",
+          error: "AI returned an invalid image extraction response.",
         },
         {
           status: 500,
@@ -307,16 +279,12 @@ Return exactly this structure:
     // --------------------------------
 
     if (
-      !Array.isArray(
-        result.questions,
-      ) ||
-      typeof result.imageClear !==
-        "boolean"
+      !Array.isArray(result.questions) ||
+      typeof result.imageClear !== "boolean"
     ) {
       return NextResponse.json(
         {
-          error:
-            "AI returned an invalid image extraction response.",
+          error: "AI returned an invalid image extraction response.",
         },
         {
           status: 500,
@@ -328,41 +296,24 @@ Return exactly this structure:
     // 10. Validate extracted questions
     // --------------------------------
 
-    const questions =
-      result.questions
-        .filter(
-          (question): question is string =>
-            typeof question ===
-            "string",
-        )
-        .map((question) =>
-          question.trim(),
-        )
-        .filter(Boolean)
-        .slice(0, MAX_QUESTIONS)
-        .map((question) =>
-          question.length >
-          MAX_QUESTION_LENGTH
-            ? question.slice(
-                0,
-                MAX_QUESTION_LENGTH,
-              )
-            : question,
-        );
+    const questions = result.questions
+      .filter((question): question is string => typeof question === "string")
+      .map((question) => question.trim())
+      .filter(Boolean)
+      .slice(0, MAX_QUESTIONS)
+      .map((question) =>
+        question.length > MAX_QUESTION_LENGTH
+          ? question.slice(0, MAX_QUESTION_LENGTH)
+          : question,
+      );
 
     // --------------------------------
     // 11. Validate subject
     // --------------------------------
 
     const subject =
-      typeof result.subject ===
-      "string"
-        ? result.subject
-            .trim()
-            .slice(
-              0,
-              MAX_SUBJECT_LENGTH,
-            )
+      typeof result.subject === "string"
+        ? result.subject.trim().slice(0, MAX_SUBJECT_LENGTH)
         : "Unknown";
 
     // --------------------------------
@@ -370,14 +321,8 @@ Return exactly this structure:
     // --------------------------------
 
     const message =
-      typeof result.message ===
-      "string"
-        ? result.message
-            .trim()
-            .slice(
-              0,
-              MAX_MESSAGE_LENGTH,
-            )
+      typeof result.message === "string"
+        ? result.message.trim().slice(0, MAX_MESSAGE_LENGTH)
         : "";
 
     // --------------------------------
@@ -391,8 +336,7 @@ Return exactly this structure:
         homework: {
           subject,
           questions: [],
-          imageClear:
-            result.imageClear,
+          imageClear: result.imageClear,
           message:
             message ||
             "I couldn't detect a clear homework question in this image.",
@@ -410,23 +354,18 @@ Return exactly this structure:
       homework: {
         subject,
         questions,
-        imageClear:
-          result.imageClear,
+        imageClear: result.imageClear,
         message,
       },
     });
   } catch (error) {
-    console.error(
-      "Homework image API error:",
-      error,
-    );
+    console.error("Homework image API error:", error);
 
     // Do not expose internal server
     // or provider error details.
     return NextResponse.json(
       {
-        error:
-          "Failed to read the homework image.",
+        error: "Failed to read the homework image.",
       },
       {
         status: 500,

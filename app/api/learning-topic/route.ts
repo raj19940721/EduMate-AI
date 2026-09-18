@@ -8,20 +8,14 @@ export async function POST(request: Request) {
     const currentQuestion = body.currentQuestion;
     const conversation = body.conversation ?? "";
 
-    if (
-      typeof currentQuestion !== "string" ||
-      !currentQuestion.trim()
-    ) {
+    if (typeof currentQuestion !== "string" || !currentQuestion.trim()) {
       return NextResponse.json(
         { error: "Current question is required." },
         { status: 400 },
       );
     }
 
-    const topic = await extractLearningTopic(
-      currentQuestion,
-      conversation,
-    );
+    const topic = await extractLearningTopic(currentQuestion, conversation);
 
     return NextResponse.json({
       topic,

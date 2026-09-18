@@ -19,10 +19,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // --------------------------------------------------
@@ -31,11 +28,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
-    const {
-      topic,
-      question,
-      studentAnswer,
-    } = body;
+    const { topic, question, studentAnswer } = body;
 
     // Never trust correctAnswer from the browser.
     // The correct answer must be loaded from the authenticated
@@ -50,8 +43,7 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         {
-          error:
-            "topic, question and studentAnswer are required",
+          error: "topic, question and studentAnswer are required",
         },
         { status: 400 },
       );
@@ -65,24 +57,19 @@ export async function POST(request: Request) {
     // 3. Load the correct answer from the user's quiz history
     // --------------------------------------------------
 
-    const {
-      data: savedQuizQuestion,
-      error: quizQuestionError,
-    } = await adminSupabase
-      .from("quiz_questions")
-      .select("id, topic, question, correct_answer, difficulty")
-      .eq("user_id", user.id)
-      .eq("topic", normalizedTopic)
-      .eq("question", normalizedQuestion)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data: savedQuizQuestion, error: quizQuestionError } =
+      await adminSupabase
+        .from("quiz_questions")
+        .select("id, topic, question, correct_answer, difficulty")
+        .eq("user_id", user.id)
+        .eq("topic", normalizedTopic)
+        .eq("question", normalizedQuestion)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
     if (quizQuestionError) {
-      console.error(
-        "Quiz question fetch error:",
-        quizQuestionError,
-      );
+      console.error("Quiz question fetch error:", quizQuestionError);
 
       return NextResponse.json(
         {
@@ -95,20 +82,15 @@ export async function POST(request: Request) {
     if (!savedQuizQuestion) {
       return NextResponse.json(
         {
-          error:
-            "Quiz question not found for this user",
+          error: "Quiz question not found for this user",
         },
         { status: 404 },
       );
     }
 
-    const correctAnswer =
-      savedQuizQuestion.correct_answer;
+    const correctAnswer = savedQuizQuestion.correct_answer;
 
-    if (
-      typeof correctAnswer !== "string" ||
-      !correctAnswer.trim()
-    ) {
+    if (typeof correctAnswer !== "string" || !correctAnswer.trim()) {
       return NextResponse.json(
         {
           error: "Correct answer is not available",
@@ -127,17 +109,13 @@ export async function POST(request: Request) {
       correctAnswer,
     });
 
-    const isCorrect =
-      evaluation.evaluation === "correct";
+    const isCorrect = evaluation.evaluation === "correct";
 
     // --------------------------------------------------
     // 4. Load learning memory
     // --------------------------------------------------
 
-    const {
-      data: memory,
-      error: memoryError,
-    } = await adminSupabase
+    const { data: memory, error: memoryError } = await adminSupabase
       .from("student_learning_memory")
       .select(
         "id, questions_asked, correct_answers, incorrect_answers, accuracy, mastery_level",
@@ -147,10 +125,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (memoryError) {
-      console.error(
-        "Learning memory fetch error:",
-        memoryError,
-      );
+      console.error("Learning memory fetch error:", memoryError);
 
       return NextResponse.json(
         {
@@ -164,8 +139,7 @@ export async function POST(request: Request) {
     if (!memory) {
       return NextResponse.json(
         {
-          error:
-            "Learning memory not found for this topic",
+          error: "Learning memory not found for this topic",
         },
         { status: 404 },
       );
@@ -175,36 +149,21 @@ export async function POST(request: Request) {
     // 5. Update topic performance
     // --------------------------------------------------
 
-    const questionsAsked =
-      (memory.questions_asked ?? 0) + 1;
+    const questionsAsked = (memory.questions_asked ?? 0) + 1;
 
-    const correctAnswers =
-      (memory.correct_answers ?? 0) +
-      (isCorrect ? 1 : 0);
+    const correctAnswers = (memory.correct_answers ?? 0) + (isCorrect ? 1 : 0);
 
     const incorrectAnswers =
-      (memory.incorrect_answers ?? 0) +
-      (isCorrect ? 0 : 1);
+      (memory.incorrect_answers ?? 0) + (isCorrect ? 0 : 1);
 
     const accuracy =
       questionsAsked > 0
-        ? Number(
-            (
-              (correctAnswers / questionsAsked) *
-              100
-            ).toFixed(2),
-          )
+        ? Number(((correctAnswers / questionsAsked) * 100).toFixed(2))
         : 0;
 
-    let masteryLevel:
-      | "learning"
-      | "practicing"
-      | "mastered";
+    let masteryLevel: "learning" | "practicing" | "mastered";
 
-    if (
-      accuracy >= 90 &&
-      questionsAsked >= 5
-    ) {
+    if (accuracy >= 90 && questionsAsked >= 5) {
       masteryLevel = "mastered";
     } else if (accuracy >= 50) {
       masteryLevel = "practicing";
@@ -225,20 +184,15 @@ export async function POST(request: Request) {
       topic: normalizedTopic,
       accuracy,
       masteryLevel,
-      nextReviewDate:
-        reviewSchedule.nextReviewDate,
-      reviewIntervalDays:
-        reviewSchedule.reviewIntervalDays,
+      nextReviewDate: reviewSchedule.nextReviewDate,
+      reviewIntervalDays: reviewSchedule.reviewIntervalDays,
     });
 
     // --------------------------------------------------
     // 7. Update learning memory
     // --------------------------------------------------
 
-    const {
-      data: updatedMemory,
-      error: updateError,
-    } = await adminSupabase
+    const { data: updatedMemory, error: updateError } = await adminSupabase
       .from("student_learning_memory")
       .update({
         questions_asked: questionsAsked,
@@ -248,10 +202,8 @@ export async function POST(request: Request) {
         mastery_level: masteryLevel,
 
         // Smart Review fields
-        next_review_date:
-          reviewSchedule.nextReviewDate,
-        review_interval_days:
-          reviewSchedule.reviewIntervalDays,
+        next_review_date: reviewSchedule.nextReviewDate,
+        review_interval_days: reviewSchedule.reviewIntervalDays,
 
         updated_at: new Date().toISOString(),
       })
@@ -261,15 +213,11 @@ export async function POST(request: Request) {
       .single();
 
     if (updateError) {
-      console.error(
-        "Learning memory update error:",
-        updateError,
-      );
+      console.error("Learning memory update error:", updateError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to update learning memory",
+          error: "Failed to update learning memory",
           details: updateError.message,
         },
         { status: 500 },
@@ -280,32 +228,22 @@ export async function POST(request: Request) {
     // 8. Record today's learning activity
     // --------------------------------------------------
 
-    const today = new Date()
-      .toISOString()
-      .split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
 
-    const {
-      data: existingActivity,
-      error: activityFetchError,
-    } = await adminSupabase
-      .from("learning_activity")
-      .select(
-        "id, questions_answered, topics_studied",
-      )
-      .eq("user_id", user.id)
-      .eq("activity_date", today)
-      .maybeSingle();
+    const { data: existingActivity, error: activityFetchError } =
+      await adminSupabase
+        .from("learning_activity")
+        .select("id, questions_answered, topics_studied")
+        .eq("user_id", user.id)
+        .eq("activity_date", today)
+        .maybeSingle();
 
     if (activityFetchError) {
-      console.error(
-        "Learning activity fetch error:",
-        activityFetchError,
-      );
+      console.error("Learning activity fetch error:", activityFetchError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load learning activity",
+          error: "Failed to load learning activity",
           details: activityFetchError.message,
         },
         { status: 500 },
@@ -313,13 +251,9 @@ export async function POST(request: Request) {
     }
 
     if (existingActivity) {
-      const newQuestionCount =
-        (existingActivity.questions_answered ?? 0) +
-        1;
+      const newQuestionCount = (existingActivity.questions_answered ?? 0) + 1;
 
-      const {
-        error: activityUpdateError,
-      } = await adminSupabase
+      const { error: activityUpdateError } = await adminSupabase
         .from("learning_activity")
         .update({
           questions_answered: newQuestionCount,
@@ -329,25 +263,18 @@ export async function POST(request: Request) {
         .eq("user_id", user.id);
 
       if (activityUpdateError) {
-        console.error(
-          "Learning activity update error:",
-          activityUpdateError,
-        );
+        console.error("Learning activity update error:", activityUpdateError);
 
         return NextResponse.json(
           {
-            error:
-              "Failed to update learning activity",
-            details:
-              activityUpdateError.message,
+            error: "Failed to update learning activity",
+            details: activityUpdateError.message,
           },
           { status: 500 },
         );
       }
     } else {
-      const {
-        error: activityInsertError,
-      } = await adminSupabase
+      const { error: activityInsertError } = await adminSupabase
         .from("learning_activity")
         .insert({
           user_id: user.id,
@@ -358,17 +285,12 @@ export async function POST(request: Request) {
         });
 
       if (activityInsertError) {
-        console.error(
-          "Learning activity insert error:",
-          activityInsertError,
-        );
+        console.error("Learning activity insert error:", activityInsertError);
 
         return NextResponse.json(
           {
-            error:
-              "Failed to record learning activity",
-            details:
-              activityInsertError.message,
+            error: "Failed to record learning activity",
+            details: activityInsertError.message,
           },
           { status: 500 },
         );
@@ -379,28 +301,19 @@ export async function POST(request: Request) {
     // 9. Update today's daily learning goal
     // --------------------------------------------------
 
-    const {
-      data: existingGoal,
-      error: goalFetchError,
-    } = await adminSupabase
+    const { data: existingGoal, error: goalFetchError } = await adminSupabase
       .from("daily_learning_goals")
-      .select(
-        "id, target_questions, completed_questions",
-      )
+      .select("id, target_questions, completed_questions")
       .eq("user_id", user.id)
       .eq("goal_date", today)
       .maybeSingle();
 
     if (goalFetchError) {
-      console.error(
-        "Daily learning goal fetch error:",
-        goalFetchError,
-      );
+      console.error("Daily learning goal fetch error:", goalFetchError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load daily learning goal",
+          error: "Failed to load daily learning goal",
           details: goalFetchError.message,
         },
         { status: 500 },
@@ -410,18 +323,12 @@ export async function POST(request: Request) {
     let dailyGoal;
 
     if (existingGoal) {
-      const completedQuestions =
-        (existingGoal.completed_questions ?? 0) +
-        1;
+      const completedQuestions = (existingGoal.completed_questions ?? 0) + 1;
 
-      const {
-        data: updatedGoal,
-        error: goalUpdateError,
-      } = await adminSupabase
+      const { data: updatedGoal, error: goalUpdateError } = await adminSupabase
         .from("daily_learning_goals")
         .update({
-          completed_questions:
-            completedQuestions,
+          completed_questions: completedQuestions,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingGoal.id)
@@ -430,17 +337,12 @@ export async function POST(request: Request) {
         .single();
 
       if (goalUpdateError) {
-        console.error(
-          "Daily learning goal update error:",
-          goalUpdateError,
-        );
+        console.error("Daily learning goal update error:", goalUpdateError);
 
         return NextResponse.json(
           {
-            error:
-              "Failed to update daily learning goal",
-            details:
-              goalUpdateError.message,
+            error: "Failed to update daily learning goal",
+            details: goalUpdateError.message,
           },
           { status: 500 },
         );
@@ -448,10 +350,7 @@ export async function POST(request: Request) {
 
       dailyGoal = updatedGoal;
     } else {
-      const {
-        data: newGoal,
-        error: goalInsertError,
-      } = await adminSupabase
+      const { data: newGoal, error: goalInsertError } = await adminSupabase
         .from("daily_learning_goals")
         .insert({
           user_id: user.id,
@@ -464,15 +363,11 @@ export async function POST(request: Request) {
         .single();
 
       if (goalInsertError) {
-        console.error(
-          "Daily learning goal insert error:",
-          goalInsertError,
-        );
+        console.error("Daily learning goal insert error:", goalInsertError);
 
         return NextResponse.json(
           {
-            error:
-              "Failed to create daily learning goal",
+            error: "Failed to create daily learning goal",
             details: goalInsertError.message,
           },
           { status: 500 },
@@ -486,10 +381,7 @@ export async function POST(request: Request) {
     // 10. Calculate current streak
     // --------------------------------------------------
 
-    const {
-      data: activities,
-      error: activitiesError,
-    } = await adminSupabase
+    const { data: activities, error: activitiesError } = await adminSupabase
       .from("learning_activity")
       .select("activity_date")
       .eq("user_id", user.id)
@@ -498,15 +390,11 @@ export async function POST(request: Request) {
       });
 
     if (activitiesError) {
-      console.error(
-        "Streak activity fetch error:",
-        activitiesError,
-      );
+      console.error("Streak activity fetch error:", activitiesError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to calculate learning streak",
+          error: "Failed to calculate learning streak",
           details: activitiesError.message,
         },
         { status: 500 },
@@ -514,46 +402,28 @@ export async function POST(request: Request) {
     }
 
     const activityDates = new Set(
-      (activities ?? []).map(
-        (activity) =>
-          activity.activity_date,
-      ),
+      (activities ?? []).map((activity) => activity.activity_date),
     );
 
     const todayDate = new Date();
 
-    const todayString = todayDate
-      .toISOString()
-      .split("T")[0];
+    const todayString = todayDate.toISOString().split("T")[0];
 
-    const yesterdayDate = new Date(
-      todayDate,
-    );
+    const yesterdayDate = new Date(todayDate);
 
-    yesterdayDate.setUTCDate(
-      yesterdayDate.getUTCDate() - 1,
-    );
+    yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
 
-    const yesterdayString = yesterdayDate
-      .toISOString()
-      .split("T")[0];
+    const yesterdayString = yesterdayDate.toISOString().split("T")[0];
 
     let currentStreak = 0;
 
-    if (
-      activityDates.has(todayString) ||
-      activityDates.has(yesterdayString)
-    ) {
+    if (activityDates.has(todayString) || activityDates.has(yesterdayString)) {
       const streakDate = new Date(
-        activityDates.has(todayString)
-          ? todayString
-          : yesterdayString,
+        activityDates.has(todayString) ? todayString : yesterdayString,
       );
 
       while (true) {
-        const dateString = streakDate
-          .toISOString()
-          .split("T")[0];
+        const dateString = streakDate.toISOString().split("T")[0];
 
         if (!activityDates.has(dateString)) {
           break;
@@ -561,9 +431,7 @@ export async function POST(request: Request) {
 
         currentStreak++;
 
-        streakDate.setUTCDate(
-          streakDate.getUTCDate() - 1,
-        );
+        streakDate.setUTCDate(streakDate.getUTCDate() - 1);
       }
     }
 
@@ -571,61 +439,44 @@ export async function POST(request: Request) {
     // 11. Count total questions
     // --------------------------------------------------
 
-    const {
-      data: allMemories,
-      error: memoriesError,
-    } = await adminSupabase
+    const { data: allMemories, error: memoriesError } = await adminSupabase
       .from("student_learning_memory")
-      .select(
-        "questions_asked, mastery_level",
-      )
+      .select("questions_asked, mastery_level")
       .eq("user_id", user.id);
 
     if (memoriesError) {
-      console.error(
-        "Learning memories fetch error:",
-        memoriesError,
-      );
+      console.error("Learning memories fetch error:", memoriesError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to calculate achievements",
+          error: "Failed to calculate achievements",
           details: memoriesError.message,
         },
         { status: 500 },
       );
     }
 
-    const totalQuestions = (
-      allMemories ?? []
-    ).reduce(
-      (total, item) =>
-        total + (item.questions_asked ?? 0),
+    const totalQuestions = (allMemories ?? []).reduce(
+      (total, item) => total + (item.questions_asked ?? 0),
       0,
     );
 
-    const masteredTopics = (
-      allMemories ?? []
-    ).filter(
-      (item) =>
-        item.mastery_level === "mastered",
+    const masteredTopics = (allMemories ?? []).filter(
+      (item) => item.mastery_level === "mastered",
     ).length;
 
     // --------------------------------------------------
     // 12. Check and award achievements
     // --------------------------------------------------
 
-    const newlyEarnedAchievements =
-      await checkAndAwardAchievements({
-        userId: user.id,
-        currentStreak,
-        questionsAnswered: totalQuestions,
-        dailyGoalCompleted:
-          dailyGoal.completed_questions >=
-          dailyGoal.target_questions,
-        masteredTopics,
-      });
+    const newlyEarnedAchievements = await checkAndAwardAchievements({
+      userId: user.id,
+      currentStreak,
+      questionsAnswered: totalQuestions,
+      dailyGoalCompleted:
+        dailyGoal.completed_questions >= dailyGoal.target_questions,
+      masteredTopics,
+    });
 
     // --------------------------------------------------
     // 13. Return result
@@ -655,46 +506,31 @@ export async function POST(request: Request) {
 
       // Smart Review
       review: {
-        nextReviewDate:
-          reviewSchedule.nextReviewDate,
-        reviewIntervalDays:
-          reviewSchedule.reviewIntervalDays,
+        nextReviewDate: reviewSchedule.nextReviewDate,
+        reviewIntervalDays: reviewSchedule.reviewIntervalDays,
       },
 
       dailyGoal: {
-        targetQuestions:
-          dailyGoal.target_questions,
-        completedQuestions:
-          dailyGoal.completed_questions,
+        targetQuestions: dailyGoal.target_questions,
+        completedQuestions: dailyGoal.completed_questions,
         remainingQuestions: Math.max(
           0,
-          dailyGoal.target_questions -
-            dailyGoal.completed_questions,
+          dailyGoal.target_questions - dailyGoal.completed_questions,
         ),
-        completed:
-          dailyGoal.completed_questions >=
-          dailyGoal.target_questions,
+        completed: dailyGoal.completed_questions >= dailyGoal.target_questions,
       },
 
-      achievements:
-        newlyEarnedAchievements,
+      achievements: newlyEarnedAchievements,
 
       memory: updatedMemory,
     });
   } catch (error) {
-    console.error(
-      "Quiz answer API error:",
-      error,
-    );
+    console.error("Quiz answer API error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to process quiz answer",
-        details:
-          error instanceof Error
-            ? error.message
-            : "Unknown error",
+        error: "Failed to process quiz answer",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     );

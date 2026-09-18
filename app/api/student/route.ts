@@ -3,8 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function GET() {
   try {
-    const supabase =
-      await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const {
       data: { user },
@@ -12,16 +11,13 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (userError) {
-      console.error(
-        "Auth user error:",
-        userError
-      );
+      console.error("Auth user error:", userError);
 
       return NextResponse.json(
         {
           error: "Authentication failed",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -30,14 +26,11 @@ export async function GET() {
         {
           error: "User is not authenticated",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    console.log(
-      "Authenticated user:",
-      user.id
-    );
+    console.log("Authenticated user:", user.id);
 
     const { data, error } = await supabase
       .from("students")
@@ -46,16 +39,13 @@ export async function GET() {
       .single();
 
     if (error) {
-      console.error(
-        "Student query error:",
-        error
-      );
+      console.error("Student query error:", error);
 
       return NextResponse.json(
         {
           error: error.message,
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -63,21 +53,16 @@ export async function GET() {
       student: data,
     });
   } catch (error) {
-    console.error(
-      "Student API error:",
-      error
-    );
+    console.error("Student API error:", error);
 
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch student",
+          error instanceof Error ? error.message : "Failed to fetch student",
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

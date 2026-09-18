@@ -22,11 +22,8 @@ const unsafePatterns = [
   /how to kill someone/i,
 ];
 
-export function checkGuardrails(
-  question: string,
-): GuardrailResult {
-  const normalizedQuestion =
-    question.trim();
+export function checkGuardrails(question: string): GuardrailResult {
+  const normalizedQuestion = question.trim();
 
   // 1. Empty question
   if (!normalizedQuestion) {

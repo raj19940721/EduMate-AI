@@ -10,18 +10,15 @@ export async function POST(request: Request) {
     // 1. Read request body
     // ----------------------------------------
 
-    const body =
-      await request.json().catch(() => null);
+    const body = await request.json().catch(() => null);
 
-    const requestedTopic =
-      body?.topic ?? null;
+    const requestedTopic = body?.topic ?? null;
 
     // ----------------------------------------
     // 2. Authenticate student
     // ----------------------------------------
 
-    const supabase =
-      await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient();
 
     const {
       data: { user },
@@ -35,7 +32,7 @@ export async function POST(request: Request) {
         },
         {
           status: 401,
-        }
+        },
       );
     }
 
@@ -43,13 +40,10 @@ export async function POST(request: Request) {
     // 3. Get student's learning memories
     // ----------------------------------------
 
-    const {
-      data: memories,
-      error: memoryError,
-    } = await adminSupabase
+    const { data: memories, error: memoryError } = await adminSupabase
       .from("student_learning_memory")
       .select(
-        "topic, subject, grade, mastery_level, notes, questions_asked, correct_answers, incorrect_answers, accuracy"
+        "topic, subject, grade, mastery_level, notes, questions_asked, correct_answers, incorrect_answers, accuracy",
       )
       .eq("user_id", user.id)
       .order("updated_at", {
@@ -58,34 +52,26 @@ export async function POST(request: Request) {
       .limit(20);
 
     if (memoryError) {
-      console.error(
-        "Failed to load learning memories:",
-        memoryError
-      );
+      console.error("Failed to load learning memories:", memoryError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load learning memories",
+          error: "Failed to load learning memories",
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
-    if (
-      !memories ||
-      memories.length === 0
-    ) {
+    if (!memories || memories.length === 0) {
       return NextResponse.json(
         {
-          error:
-            "No learning memory available. Please learn a topic first.",
+          error: "No learning memory available. Please learn a topic first.",
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
@@ -93,18 +79,13 @@ export async function POST(request: Request) {
     // 4. Select topic
     // ----------------------------------------
 
-    const selectedMemory =
-      requestedTopic
-        ? memories.find(
-            (memory) =>
-              memory.topic
-                .toLowerCase()
-                .trim() ===
-              requestedTopic
-                .toLowerCase()
-                .trim()
-          )
-        : memories[0];
+    const selectedMemory = requestedTopic
+      ? memories.find(
+          (memory) =>
+            memory.topic.toLowerCase().trim() ===
+            requestedTopic.toLowerCase().trim(),
+        )
+      : memories[0];
 
     if (!selectedMemory) {
       return NextResponse.json(
@@ -113,7 +94,7 @@ export async function POST(request: Request) {
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
@@ -121,103 +102,71 @@ export async function POST(request: Request) {
     // 5. Determine adaptive difficulty
     // ----------------------------------------
 
-    const accuracy = Number(
-      selectedMemory.accuracy ?? 0
-    );
+    const accuracy = Number(selectedMemory.accuracy ?? 0);
 
-    const masteryLevel =
-      selectedMemory.mastery_level ??
-      "learning";
+    const masteryLevel = selectedMemory.mastery_level ?? "learning";
 
-    const questionsAsked =
-      Number(
-        selectedMemory.questions_asked ?? 0
-      );
+    const questionsAsked = Number(selectedMemory.questions_asked ?? 0);
 
-    const difficulty =
-      determineQuizDifficulty({
-        accuracy,
-        masteryLevel,
-        questionsAsked,
-      });
+    const difficulty = determineQuizDifficulty({
+      accuracy,
+      masteryLevel,
+      questionsAsked,
+    });
 
-    console.log(
-      "🎯 Adaptive Quiz Difficulty:",
-      {
-        topic:
-          selectedMemory.topic,
-        accuracy,
-        masteryLevel,
-        questionsAsked,
-        difficulty,
-      }
-    );
+    console.log("🎯 Adaptive Quiz Difficulty:", {
+      topic: selectedMemory.topic,
+      accuracy,
+      masteryLevel,
+      questionsAsked,
+      difficulty,
+    });
 
     // ----------------------------------------
     // 6. Get ALL previous questions
     // ----------------------------------------
 
-    const {
-      data: previousQuestions,
-      error:
-        previousQuestionsError,
-    } = await adminSupabase
-      .from("quiz_questions")
-      .select(
-        "question, correct_answer, difficulty, created_at"
-      )
-      .eq("user_id", user.id)
-      .eq(
-        "topic",
-        selectedMemory.topic
-      )
-      .order("created_at", {
-        ascending: false,
-      });
+    const { data: previousQuestions, error: previousQuestionsError } =
+      await adminSupabase
+        .from("quiz_questions")
+        .select("question, correct_answer, difficulty, created_at")
+        .eq("user_id", user.id)
+        .eq("topic", selectedMemory.topic)
+        .order("created_at", {
+          ascending: false,
+        });
 
     if (previousQuestionsError) {
       console.error(
         "Failed to load previous quiz questions:",
-        previousQuestionsError
+        previousQuestionsError,
       );
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load previous quiz questions",
+          error: "Failed to load previous quiz questions",
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
-    const allPreviousQuestions =
-      previousQuestions ?? [];
+    const allPreviousQuestions = previousQuestions ?? [];
 
-    console.log(
-      "📚 Previous quiz history:",
-      {
-        topic:
-          selectedMemory.topic,
-        totalQuestions:
-          allPreviousQuestions.length,
-      }
-    );
+    console.log("📚 Previous quiz history:", {
+      topic: selectedMemory.topic,
+      totalQuestions: allPreviousQuestions.length,
+    });
 
     // ----------------------------------------
     // 7. Normalize questions
     // ----------------------------------------
 
-    function normalizeQuestion(
-      question: string
-    ) {
+    function normalizeQuestion(question: string) {
       return question
         .toLowerCase()
-        .replace(
-          /[^\p{L}\p{N}\s]/gu,
-          ""
-        )
+        .replace(/[^\p{L}\p{N}\s]/gu, "")
         .replace(/\s+/g, " ")
         .trim();
     }
@@ -227,52 +176,45 @@ export async function POST(request: Request) {
     // similarity calculation too much.
     // ----------------------------------------
 
-    const stopWords =
-      new Set([
-        "what",
-        "is",
-        "are",
-        "the",
-        "a",
-        "an",
-        "of",
-        "to",
-        "in",
-        "on",
-        "for",
-        "do",
-        "does",
-        "did",
-        "how",
-        "why",
-        "which",
-        "who",
-        "where",
-        "when",
-        "can",
-        "and",
-        "or",
-        "from",
-        "with",
-        "that",
-        "this",
-        "their",
-        "they",
-        "plant",
-        "plants",
-      ]);
+    const stopWords = new Set([
+      "what",
+      "is",
+      "are",
+      "the",
+      "a",
+      "an",
+      "of",
+      "to",
+      "in",
+      "on",
+      "for",
+      "do",
+      "does",
+      "did",
+      "how",
+      "why",
+      "which",
+      "who",
+      "where",
+      "when",
+      "can",
+      "and",
+      "or",
+      "from",
+      "with",
+      "that",
+      "this",
+      "their",
+      "they",
+      "plant",
+      "plants",
+    ]);
 
-    function getMeaningfulWords(
-      question: string
-    ) {
+    function getMeaningfulWords(question: string) {
       return new Set(
         normalizeQuestion(question)
           .split(" ")
-          .filter(
-            (word) =>
-              word.length > 3 &&
-              !stopWords.has(word)
-          )
+          .filter((word) => word.length > 3 && !stopWords.has(word)),
       );
     }
 
@@ -280,25 +222,16 @@ export async function POST(request: Request) {
     // 9. Build complete previous-question list
     // ----------------------------------------
 
-    const previousQuestionSet =
-      new Set(
-        allPreviousQuestions
-          .map(
-            (item) =>
-              normalizeQuestion(
-                item.question
-              )
-          )
-          .filter(Boolean)
-      );
+    const previousQuestionSet = new Set(
+      allPreviousQuestions
+        .map((item) => normalizeQuestion(item.question))
+        .filter(Boolean),
+    );
 
     const previousQuestionContext =
       allPreviousQuestions.length > 0
         ? allPreviousQuestions
-            .map(
-              (item, index) =>
-                `${index + 1}. ${item.question}`
-            )
+            .map((item, index) => `${index + 1}. ${item.question}`)
             .join("\n")
         : "No previous questions.";
 
@@ -306,27 +239,17 @@ export async function POST(request: Request) {
     // 10. Check if question is too similar
     // ----------------------------------------
 
-    function isTooSimilarToPreviousQuestion(
-      generatedQuestion: string
-    ) {
-      const normalizedGenerated =
-        normalizeQuestion(
-          generatedQuestion
-        );
+    function isTooSimilarToPreviousQuestion(generatedQuestion: string) {
+      const normalizedGenerated = normalizeQuestion(generatedQuestion);
 
       // ----------------------------------------
       // Exact duplicate
       // ----------------------------------------
 
-      if (
-        previousQuestionSet.has(
-          normalizedGenerated
-        )
-      ) {
+      if (previousQuestionSet.has(normalizedGenerated)) {
         return {
           duplicate: true,
-          reason:
-            "exact_duplicate",
+          reason: "exact_duplicate",
         };
       }
 
@@ -334,71 +257,41 @@ export async function POST(request: Request) {
       // Meaningful-word similarity
       // ----------------------------------------
 
-      const generatedWords =
-        getMeaningfulWords(
-          generatedQuestion
-        );
+      const generatedWords = getMeaningfulWords(generatedQuestion);
 
-      if (
-        generatedWords.size === 0
-      ) {
+      if (generatedWords.size === 0) {
         return {
           duplicate: false,
           reason: "",
         };
       }
 
-      for (
-        const previousQuestion
-        of allPreviousQuestions
-      ) {
-        const previousWords =
-          getMeaningfulWords(
-            previousQuestion.question
-          );
+      for (const previousQuestion of allPreviousQuestions) {
+        const previousWords = getMeaningfulWords(previousQuestion.question);
 
-        if (
-          previousWords.size === 0
-        ) {
+        if (previousWords.size === 0) {
           continue;
         }
 
         let intersection = 0;
 
-        for (
-          const word of generatedWords
-        ) {
-          if (
-            previousWords.has(word)
-          ) {
+        for (const word of generatedWords) {
+          if (previousWords.has(word)) {
             intersection++;
           }
         }
 
-        const unionSize =
-          new Set([
-            ...generatedWords,
-            ...previousWords,
-          ]).size;
+        const unionSize = new Set([...generatedWords, ...previousWords]).size;
 
-        const jaccardSimilarity =
-          unionSize > 0
-            ? intersection /
-              unionSize
-            : 0;
+        const jaccardSimilarity = unionSize > 0 ? intersection / unionSize : 0;
 
         // Very high semantic-word overlap
-        if (
-          jaccardSimilarity >= 0.75
-        ) {
+        if (jaccardSimilarity >= 0.75) {
           return {
             duplicate: true,
-            reason:
-              "very_similar",
-            previousQuestion:
-              previousQuestion.question,
-            similarity:
-              jaccardSimilarity,
+            reason: "very_similar",
+            previousQuestion: previousQuestion.question,
+            similarity: jaccardSimilarity,
           };
         }
       }
@@ -421,19 +314,13 @@ export async function POST(request: Request) {
       correctAnswer: string;
     } | null = null;
 
-    for (
-      let attempt = 1;
-      attempt <=
-      maxGenerationAttempts;
-      attempt++
-    ) {
+    for (let attempt = 1; attempt <= maxGenerationAttempts; attempt++) {
       console.log(
         `🎯 Generating quiz question - attempt ${attempt}/${maxGenerationAttempts}`,
         {
-          topic:
-            selectedMemory.topic,
+          topic: selectedMemory.topic,
           difficulty,
-        }
+        },
       );
 
       const prompt = `
@@ -455,14 +342,8 @@ ${masteryLevel}
 
 STUDENT PERFORMANCE:
 Questions Asked: ${questionsAsked}
-Correct Answers: ${
-        selectedMemory.correct_answers ??
-        0
-      }
-Incorrect Answers: ${
-        selectedMemory.incorrect_answers ??
-        0
-      }
+Correct Answers: ${selectedMemory.correct_answers ?? 0}
+Incorrect Answers: ${selectedMemory.incorrect_answers ?? 0}
 Accuracy: ${accuracy}%
 
 REQUIRED DIFFICULTY:
@@ -530,8 +411,7 @@ IMPORTANT:
 - Do not repeat previous questions.
 - Do not create a minor wording variation of a previous question.
 - The question must be appropriate for Grade ${
-        selectedMemory.grade ??
-        "the student's grade"
+        selectedMemory.grade ?? "the student's grade"
       }.
 - Provide one clear expected answer.
 - Return JSON only.
@@ -549,56 +429,45 @@ Return exactly:
 `;
 
       try {
-        const response =
-          await ai.models.generateContent({
-            model:
-              "gemini-3.5-flash-lite",
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash-lite",
 
-            contents: prompt,
+          contents: prompt,
 
-            config: {
-              responseMimeType:
-                "application/json",
+          config: {
+            responseMimeType: "application/json",
 
-              responseSchema: {
-                type: "object",
+            responseSchema: {
+              type: "object",
 
-                properties: {
-                  topic: {
-                    type: "string",
-                  },
-
-                  question: {
-                    type: "string",
-                  },
-
-                  correctAnswer: {
-                    type: "string",
-                  },
+              properties: {
+                topic: {
+                  type: "string",
                 },
 
-                required: [
-                  "topic",
-                  "question",
-                  "correctAnswer",
-                ],
-              },
-            },
-          });
+                question: {
+                  type: "string",
+                },
 
-        const text =
-          response.text?.trim();
+                correctAnswer: {
+                  type: "string",
+                },
+              },
+
+              required: ["topic", "question", "correctAnswer"],
+            },
+          },
+        });
+
+        const text = response.text?.trim();
 
         if (!text) {
-          console.warn(
-            `⚠️ Attempt ${attempt}: empty AI response.`
-          );
+          console.warn(`⚠️ Attempt ${attempt}: empty AI response.`);
 
           continue;
         }
 
-        const generatedQuiz =
-          JSON.parse(text);
+        const generatedQuiz = JSON.parse(text);
 
         // ----------------------------------------
         // Validate response
@@ -609,9 +478,7 @@ Return exactly:
           !generatedQuiz.question ||
           !generatedQuiz.correctAnswer
         ) {
-          console.warn(
-            `⚠️ Attempt ${attempt}: incomplete quiz response.`
-          );
+          console.warn(`⚠️ Attempt ${attempt}: incomplete quiz response.`);
 
           continue;
         }
@@ -621,17 +488,10 @@ Return exactly:
         // ----------------------------------------
 
         if (
-          generatedQuiz.topic
-            .toLowerCase()
-            .trim() !==
-          selectedMemory.topic
-            .toLowerCase()
-            .trim()
+          generatedQuiz.topic.toLowerCase().trim() !==
+          selectedMemory.topic.toLowerCase().trim()
         ) {
-          console.warn(
-            "⚠️ AI generated wrong topic:",
-            generatedQuiz.topic
-          );
+          console.warn("⚠️ AI generated wrong topic:", generatedQuiz.topic);
 
           continue;
         }
@@ -640,28 +500,18 @@ Return exactly:
         // Local duplicate validation
         // ----------------------------------------
 
-        const similarityCheck =
-          isTooSimilarToPreviousQuestion(
-            generatedQuiz.question
-          );
+        const similarityCheck = isTooSimilarToPreviousQuestion(
+          generatedQuiz.question,
+        );
 
-        if (
-          similarityCheck.duplicate
-        ) {
-          console.warn(
-            "⚠️ Duplicate/similar question detected:",
-            {
-              attempt,
-              reason:
-                similarityCheck.reason,
-              generatedQuestion:
-                generatedQuiz.question,
-              previousQuestion:
-                similarityCheck.previousQuestion,
-              similarity:
-                similarityCheck.similarity,
-            }
-          );
+        if (similarityCheck.duplicate) {
+          console.warn("⚠️ Duplicate/similar question detected:", {
+            attempt,
+            reason: similarityCheck.reason,
+            generatedQuestion: generatedQuiz.question,
+            previousQuestion: similarityCheck.previousQuestion,
+            similarity: similarityCheck.similarity,
+          });
 
           continue;
         }
@@ -671,31 +521,23 @@ Return exactly:
         // ----------------------------------------
 
         quiz = {
-          topic:
-            generatedQuiz.topic,
-          question:
-            generatedQuiz.question,
-          correctAnswer:
-            generatedQuiz.correctAnswer,
+          topic: generatedQuiz.topic,
+          question: generatedQuiz.question,
+          correctAnswer: generatedQuiz.correctAnswer,
         };
 
-        console.log(
-          "✅ New unique quiz question generated:",
-          {
-            attempt,
-            topic:
-              quiz.topic,
-            difficulty,
-            question:
-              quiz.question,
-          }
-        );
+        console.log("✅ New unique quiz question generated:", {
+          attempt,
+          topic: quiz.topic,
+          difficulty,
+          question: quiz.question,
+        });
 
         break;
       } catch (generationError) {
         console.error(
           `❌ Quiz generation attempt ${attempt} failed:`,
-          generationError
+          generationError,
         );
       }
     }
@@ -712,7 +554,7 @@ Return exactly:
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
@@ -720,39 +562,30 @@ Return exactly:
     // 13. Save generated question
     // ----------------------------------------
 
-    const {
-      error: saveQuestionError,
-    } = await adminSupabase
+    const { error: saveQuestionError } = await adminSupabase
       .from("quiz_questions")
       .insert({
         user_id: user.id,
 
-        topic:
-          selectedMemory.topic,
+        topic: selectedMemory.topic,
 
-        question:
-          quiz.question,
+        question: quiz.question,
 
-        correct_answer:
-          quiz.correctAnswer,
+        correct_answer: quiz.correctAnswer,
 
         difficulty,
       });
 
     if (saveQuestionError) {
-      console.error(
-        "Failed to save quiz question:",
-        saveQuestionError
-      );
+      console.error("Failed to save quiz question:", saveQuestionError);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to save quiz question",
+          error: "Failed to save quiz question",
         },
         {
           status: 500,
-        }
+        },
       );
     }
 
@@ -760,27 +593,21 @@ Return exactly:
     // 14. Return adaptive quiz
     // ----------------------------------------
 
-    console.log(
-      "🎯 Final Adaptive Quiz:",
-      {
-        topic:
-          selectedMemory.topic,
+    console.log("🎯 Final Adaptive Quiz:", {
+      topic: selectedMemory.topic,
 
-        difficulty,
+      difficulty,
 
-        accuracy,
+      accuracy,
 
-        masteryLevel,
+      masteryLevel,
 
-        questionsAsked,
+      questionsAsked,
 
-        previousQuestionCount:
-          allPreviousQuestions.length,
+      previousQuestionCount: allPreviousQuestions.length,
 
-        question:
-          quiz.question,
-      }
-    );
+      question: quiz.question,
+    });
 
     return NextResponse.json({
       success: true,
@@ -792,8 +619,7 @@ Return exactly:
       },
 
       learningMemory: {
-        topic:
-          selectedMemory.topic,
+        topic: selectedMemory.topic,
 
         masteryLevel,
 
@@ -805,19 +631,15 @@ Return exactly:
       difficulty,
     });
   } catch (error) {
-    console.error(
-      "Quiz generation error:",
-      error
-    );
+    console.error("Quiz generation error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to generate quiz",
+        error: "Failed to generate quiz",
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

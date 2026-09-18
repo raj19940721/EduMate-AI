@@ -1,9 +1,6 @@
 import { ai } from "@/lib/gemini";
 
-export type AnswerEvaluation =
-  | "correct"
-  | "partially_correct"
-  | "incorrect";
+export type AnswerEvaluation = "correct" | "partially_correct" | "incorrect";
 
 export interface AnswerEvaluationResult {
   evaluation: AnswerEvaluation;
@@ -29,10 +26,7 @@ function isNormalizedExactMatch(
   studentAnswer: string,
   correctAnswer: string,
 ): boolean {
-  return (
-    normalizeAnswer(studentAnswer) ===
-    normalizeAnswer(correctAnswer)
-  );
+  return normalizeAnswer(studentAnswer) === normalizeAnswer(correctAnswer);
 }
 
 /**
@@ -42,18 +36,14 @@ function isNormalizedExactMatch(
  * answer because the feedback must stay aligned with the saved
  * correctAnswer.
  */
-function createCorrectFeedback(
-  correctAnswer: string,
-): string {
+function createCorrectFeedback(correctAnswer: string): string {
   return `Correct! ${correctAnswer.trim()} is the expected answer. Great job!`;
 }
 
 /**
  * Create safe deterministic feedback for an exact match.
  */
-function createExactMatchFeedback(
-  correctAnswer: string,
-): string {
+function createExactMatchFeedback(correctAnswer: string): string {
   return `Correct! ${correctAnswer.trim()} is the expected answer. Great job!`;
 }
 
@@ -66,25 +56,19 @@ export async function evaluateAnswer({
   studentAnswer: string;
   correctAnswer: string;
 }): Promise<AnswerEvaluationResult> {
-  const normalizedStudentAnswer =
-    normalizeAnswer(studentAnswer);
+  const normalizedStudentAnswer = normalizeAnswer(studentAnswer);
 
-  const normalizedCorrectAnswer =
-    normalizeAnswer(correctAnswer);
+  const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
 
   // --------------------------------------------------
   // 1. Validate input
   // --------------------------------------------------
 
-  if (
-    !normalizedStudentAnswer ||
-    !normalizedCorrectAnswer
-  ) {
+  if (!normalizedStudentAnswer || !normalizedCorrectAnswer) {
     return {
       evaluation: "incorrect",
       score: 0,
-      feedback:
-        "Please provide an answer and try again.",
+      feedback: "Please provide an answer and try again.",
     };
   }
 
@@ -92,15 +76,11 @@ export async function evaluateAnswer({
   // 2. Deterministic exact/normalized match
   // --------------------------------------------------
 
-  if (
-    normalizedStudentAnswer ===
-    normalizedCorrectAnswer
-  ) {
+  if (normalizedStudentAnswer === normalizedCorrectAnswer) {
     return {
       evaluation: "correct",
       score: 100,
-      feedback:
-        createExactMatchFeedback(correctAnswer),
+      feedback: createExactMatchFeedback(correctAnswer),
     };
   }
 
@@ -230,54 +210,42 @@ Return exactly:
 `;
 
   try {
-    const response =
-      await ai.models.generateContent({
-        model: "gemini-3.5-flash-lite",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
 
-          responseSchema: {
-            type: "object",
+        responseSchema: {
+          type: "object",
 
-            properties: {
-              evaluation: {
-                type: "string",
-                enum: [
-                  "correct",
-                  "partially_correct",
-                  "incorrect",
-                ],
-              },
-
-              score: {
-                type: "number",
-              },
-
-              feedback: {
-                type: "string",
-              },
+          properties: {
+            evaluation: {
+              type: "string",
+              enum: ["correct", "partially_correct", "incorrect"],
             },
 
-            required: [
-              "evaluation",
-              "score",
-              "feedback",
-            ],
+            score: {
+              type: "number",
+            },
+
+            feedback: {
+              type: "string",
+            },
           },
+
+          required: ["evaluation", "score", "feedback"],
         },
-      });
+      },
+    });
 
     const text = response.text?.trim();
 
     if (!text) {
-      throw new Error(
-        "Empty answer evaluation response",
-      );
+      throw new Error("Empty answer evaluation response");
     }
 
-    const result =
-      JSON.parse(text) as AnswerEvaluationResult;
+    const result = JSON.parse(text) as AnswerEvaluationResult;
 
     // --------------------------------------------------
     // 4. Validate AI evaluation
@@ -289,41 +257,24 @@ Return exactly:
       "incorrect",
     ];
 
-    if (
-      !validEvaluations.includes(
-        result.evaluation,
-      )
-    ) {
-      throw new Error(
-        "Invalid evaluation returned by AI",
-      );
+    if (!validEvaluations.includes(result.evaluation)) {
+      throw new Error("Invalid evaluation returned by AI");
     }
 
     // --------------------------------------------------
     // 5. Normalize score
     // --------------------------------------------------
 
-    let score = Math.max(
-      0,
-      Math.min(
-        100,
-        Number(result.score) || 0,
-      ),
-    );
+    let score = Math.max(0, Math.min(100, Number(result.score) || 0));
 
     // Keep score consistent with evaluation.
     if (result.evaluation === "correct") {
       score = 100;
-    } else if (
-      result.evaluation === "incorrect"
-    ) {
+    } else if (result.evaluation === "incorrect") {
       score = 0;
     } else {
       // Keep AI partial score between 1 and 99.
-      score = Math.max(
-        1,
-        Math.min(99, score),
-      );
+      score = Math.max(1, Math.min(99, score));
     }
 
     // --------------------------------------------------
@@ -341,16 +292,11 @@ Return exactly:
      * Instead, the expected answer stored by EduMate
      * becomes the source of truth.
      */
-    if (
-      result.evaluation === "correct"
-    ) {
+    if (result.evaluation === "correct") {
       return {
         evaluation: "correct",
         score: 100,
-        feedback:
-          createCorrectFeedback(
-            correctAnswer,
-          ),
+        feedback: createCorrectFeedback(correctAnswer),
       };
     }
 
@@ -358,53 +304,38 @@ Return exactly:
     // 7. Partial / incorrect feedback
     // --------------------------------------------------
 
-    const feedback =
-      result.feedback?.trim();
+    const feedback = result.feedback?.trim();
 
     return {
       evaluation: result.evaluation,
       score,
       feedback:
         feedback ||
-        (
-          result.evaluation ===
-          "partially_correct"
-            ? `You're on the right track. The expected answer is ${correctAnswer.trim()}.`
-            : `Let's review this topic. The expected answer is ${correctAnswer.trim()}.`
-        ),
+        (result.evaluation === "partially_correct"
+          ? `You're on the right track. The expected answer is ${correctAnswer.trim()}.`
+          : `Let's review this topic. The expected answer is ${correctAnswer.trim()}.`),
     };
   } catch (error) {
-    console.error(
-      "Answer evaluation failed:",
-      error,
-    );
+    console.error("Answer evaluation failed:", error);
 
     // --------------------------------------------------
     // 8. Safe deterministic fallback
     // --------------------------------------------------
 
-    const isExactMatch =
-      isNormalizedExactMatch(
-        studentAnswer,
-        correctAnswer,
-      );
+    const isExactMatch = isNormalizedExactMatch(studentAnswer, correctAnswer);
 
     if (isExactMatch) {
       return {
         evaluation: "correct",
         score: 100,
-        feedback:
-          createExactMatchFeedback(
-            correctAnswer,
-          ),
+        feedback: createExactMatchFeedback(correctAnswer),
       };
     }
 
     return {
       evaluation: "incorrect",
       score: 0,
-      feedback:
-        `Let's review this answer. The expected answer is ${correctAnswer.trim()}.`,
+      feedback: `Let's review this answer. The expected answer is ${correctAnswer.trim()}.`,
     };
   }
 }

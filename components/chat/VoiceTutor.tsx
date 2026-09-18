@@ -2011,176 +2011,105 @@ Rules:
   // --------------------------------------------------
 
   return (
-    <div className="rounded-2xl border bg-white p-5 shadow-sm">
-      {/* ------------------------------------------ */}
-      {/* Header */}
-      {/* ------------------------------------------ */}
-
-      <div className="flex items-center justify-between">
+    <div className="voice-tutor">
+      <div className="voice-tutor__header">
         <div>
-          <h2 className="text-lg font-semibold">🎙️ EduMate Voice Tutor</h2>
-
-          <p className="mt-1 text-sm text-gray-600">
-            Talk to EduMate using your voice.
-          </p>
+          <span className="voice-tutor__eyebrow">Voice Learning</span>
+          <h2>🎙️ EduMate Voice Tutor</h2>
+          <p>Talk to EduMate using your voice.</p>
         </div>
 
-        {/* Animated indicator */}
-        <div className="relative flex h-12 w-12 items-center justify-center">
-          {status === "listening" && (
-            <>
-              <span className="absolute h-10 w-10 animate-ping rounded-full bg-blue-300 opacity-50" />
-
-              <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-xl">
-                🎤
-              </span>
-            </>
-          )}
-
-          {status === "speaking" && (
-            <>
-              <span className="absolute h-10 w-10 animate-pulse rounded-full bg-green-300 opacity-60" />
-
-              <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-xl">
-                🔊
-              </span>
-            </>
-          )}
-
-          {status === "connecting" && (
-            <span className="flex h-10 w-10 animate-pulse items-center justify-center rounded-full bg-yellow-100 text-xl">
-              ⏳
-            </span>
-          )}
-
-          {status === "error" && (
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-xl">
-              ⚠️
-            </span>
-          )}
-
-          {status === "idle" && (
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-xl">
-              💬
-            </span>
-          )}
+        <div
+          className={`voice-tutor__indicator voice-tutor__indicator--${status}`}
+        >
+          <span className="voice-tutor__pulse" aria-hidden="true" />
+          <span className="voice-tutor__indicator-bubble">
+            {status === "listening" && "🎤"}
+            {status === "speaking" && "🔊"}
+            {status === "connecting" && "⏳"}
+            {status === "error" && "⚠️"}
+            {status === "idle" && "💬"}
+          </span>
         </div>
       </div>
-
-      {/* ------------------------------------------ */}
-      {/* Status */}
-      {/* ------------------------------------------ */}
 
       <div
-        className={`mt-5 rounded-xl p-4 text-center ${
+        className={`voice-tutor__status ${
           status === "error"
-            ? "bg-red-50"
+            ? "voice-tutor__status--error"
             : isMuted
-              ? "bg-red-50"
+              ? "voice-tutor__status--muted"
               : status === "speaking"
-                ? "bg-green-50"
+                ? "voice-tutor__status--speaking"
                 : status === "listening"
-                  ? "bg-blue-50"
-                  : "bg-gray-50"
+                  ? "voice-tutor__status--listening"
+                  : ""
         }`}
       >
-        <p className="font-medium">
+        <span>
           {status === "idle" && "Ready to talk"}
-
           {status === "connecting" && "⏳ Connecting to EduMate..."}
-
           {status === "listening" && !isMuted && "🎤 Listening..."}
-
           {status === "listening" && isMuted && "🔇 Microphone muted"}
-
           {status === "speaking" && "🔊 EduMate is speaking..."}
-
           {status === "error" && "⚠️ Voice connection needs attention"}
-        </p>
+        </span>
       </div>
 
-      {/* ------------------------------------------ */}
-      {/* Error */}
-      {/* ------------------------------------------ */}
-
       {error && (
-        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <div className="voice-tutor__alert voice-tutor__alert--error">
           {error}
         </div>
       )}
-
-      {/* ------------------------------------------ */}
-      {/* Live Transcripts */}
-      {/* ------------------------------------------ */}
 
       {(studentTranscript ||
         eduMateTranscript ||
         status === "listening" ||
         status === "speaking") && (
-        <div className="mt-5 space-y-3">
-          {/* Student live transcript */}
+        <div className="voice-tutor__transcript-list">
           {studentTranscript && (
-            <div className="rounded-xl border bg-blue-50 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">🧑‍🎓</span>
-
-                <span className="font-semibold text-gray-800">You</span>
+            <div className="voice-tutor__bubble voice-tutor__bubble--user">
+              <div className="voice-tutor__bubble-head">
+                <span>🧑‍🎓</span>
+                <span>You</span>
               </div>
-
-              <p className="text-sm text-gray-700">{studentTranscript}</p>
+              <p>{studentTranscript}</p>
             </div>
           )}
 
-          {/* EduMate live transcript */}
           {eduMateTranscript && (
-            <div className="rounded-xl border bg-gray-50 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-lg">🤖</span>
-
-                <span className="font-semibold text-gray-800">EduMate</span>
+            <div className="voice-tutor__bubble">
+              <div className="voice-tutor__bubble-head">
+                <span>🤖</span>
+                <span>EduMate</span>
               </div>
-
-              <p className="text-sm text-gray-700">{eduMateTranscript}</p>
+              <p>{eduMateTranscript}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* ------------------------------------------ */}
-      {/* Conversation History */}
-      {/* ------------------------------------------ */}
-
       {conversation.length > 0 && (
-        <div className="mt-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-800">📝 Conversation</h3>
-
-            <span className="text-xs text-gray-500">
+        <div className="voice-tutor__history">
+          <div className="voice-tutor__history-header">
+            <h3>📝 Conversation</h3>
+            <span>
               {conversation.length}{" "}
               {conversation.length === 1 ? "message" : "messages"}
             </span>
           </div>
 
-          <div className="max-h-80 space-y-3 overflow-y-auto rounded-xl border bg-gray-50 p-3">
+          <div className="voice-tutor__history-list">
             {conversation.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
-                className={`flex ${
-                  message.role === "student" ? "justify-end" : "justify-start"
-                }`}
+                className={`voice-tutor__message ${message.role === "student" ? "voice-tutor__message--user" : ""}`}
               >
-                <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                    message.role === "student"
-                      ? "bg-blue-600 text-white"
-                      : "bg-white text-gray-800 shadow-sm"
-                  }`}
-                >
-                  <div className="mb-1 text-xs font-semibold opacity-80">
+                <div className="voice-tutor__message-box">
+                  <div className="voice-tutor__message-tag">
                     {message.role === "student" ? "🧑‍🎓 You" : "🤖 EduMate"}
                   </div>
-
-                  <p className="text-sm leading-relaxed">{message.text}</p>
+                  <p>{message.text}</p>
                 </div>
               </div>
             ))}
@@ -2188,17 +2117,11 @@ Rules:
         </div>
       )}
 
-      {/* ------------------------------------------ */}
-      {/* Homework Upload */}
-      {/* ------------------------------------------ */}
-
-      <div className="mt-5 rounded-xl border border-dashed bg-gray-50 p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="voice-tutor__upload">
+        <div className="voice-tutor__upload-header">
           <div>
-            <h3 className="font-semibold text-gray-800">
-              📎 Homework Image / PDF
-            </h3>
-            <p className="mt-1 text-xs text-gray-500">
+            <h3>📎 Homework Image / PDF</h3>
+            <p>
               Upload a worksheet or homework photo while Voice Tutor is active.
             </p>
           </div>
@@ -2220,61 +2143,52 @@ Rules:
               status === "connecting" ||
               status === "error"
             }
-            className="rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+            className="voice-tutor__upload-button"
           >
             {homeworkUploadBusy ? "⏳ Reading..." : "📎 Upload Homework"}
           </button>
         </div>
 
         {homeworkUploadFileName && (
-          <p className="mt-3 text-xs text-gray-600">
-            File: <span className="font-medium">{homeworkUploadFileName}</span>
+          <p className="voice-tutor__upload-file">
+            File: <span>{homeworkUploadFileName}</span>
             {homeworkDetectedSubject && (
               <>
                 {" "}
-                · Subject:{" "}
-                <span className="font-medium">{homeworkDetectedSubject}</span>
+                · Subject: <span>{homeworkDetectedSubject}</span>
               </>
             )}
           </p>
         )}
 
         {homeworkUploadMessage && (
-          <div className="mt-3 rounded-lg bg-white p-3 text-sm text-gray-700 shadow-sm">
+          <div className="voice-tutor__upload-message">
             {homeworkUploadMessage}
           </div>
         )}
 
         {homeworkQuestions.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm font-semibold text-gray-800">
-              Select a question
-            </p>
+          <div className="voice-tutor__question-list">
+            <p className="voice-tutor__upload-file">Select a question</p>
 
             {homeworkQuestions.map((item) => (
               <label
                 key={item.id}
-                className={`flex cursor-pointer gap-3 rounded-lg border p-3 text-sm transition ${
-                  selectedHomeworkQuestionId === item.id
-                    ? "border-indigo-500 bg-indigo-50"
-                    : "border-gray-200 bg-white hover:bg-gray-50"
-                }`}
+                className={`voice-tutor__question ${selectedHomeworkQuestionId === item.id ? "voice-tutor__question--active" : ""}`}
               >
                 <input
                   type="radio"
                   name="voice-homework-question"
                   checked={selectedHomeworkQuestionId === item.id}
                   onChange={() => setSelectedHomeworkQuestionId(item.id)}
-                  className="mt-1"
                 />
-                <span className="leading-relaxed text-gray-700">
-                  <span className="font-semibold">Q{item.id}.</span>{" "}
-                  {item.question}
+                <span className="voice-tutor__question-text">
+                  <strong>Q{item.id}.</strong> {item.question}
                 </span>
               </label>
             ))}
 
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="voice-tutor__question-actions">
               <button
                 type="button"
                 onClick={solveUploadedHomework}
@@ -2283,7 +2197,7 @@ Rules:
                   homeworkUploadBusy ||
                   !selectedHomeworkQuestionId
                 }
-                className="rounded-full bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600"
+                className="voice-tutor__action"
               >
                 🤖 Solve & Speak
               </button>
@@ -2292,7 +2206,7 @@ Rules:
                 type="button"
                 onClick={resetHomeworkUpload}
                 disabled={homeworkUploadBusy}
-                className="rounded-full bg-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-800 transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="voice-tutor__action--secondary"
               >
                 Clear
               </button>
@@ -2301,71 +2215,49 @@ Rules:
         )}
       </div>
 
-      {/* ------------------------------------------ */}
-      {/* Controls */}
-      {/* ------------------------------------------ */}
-
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-        {/* Idle */}
+      <div className="voice-tutor__controls">
         {status === "idle" && (
-          <button
-            onClick={startVoice}
-            className="rounded-full bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
-          >
+          <button onClick={startVoice} className="voice-tutor__action">
             🎤 Start Voice Tutor
           </button>
         )}
 
-        {/* Connecting */}
         {status === "connecting" && (
-          <button
-            disabled
-            className="cursor-not-allowed rounded-full bg-gray-300 px-6 py-3 font-semibold text-gray-600"
-          >
+          <button disabled className="voice-tutor__action--secondary">
             ⏳ Connecting...
           </button>
         )}
 
-        {/* Active */}
         {(status === "listening" || status === "speaking") && (
           <>
-            {/* Mute */}
             <button
               onClick={toggleMute}
-              className={`rounded-full px-5 py-3 font-semibold transition ${
+              className={
                 isMuted
-                  ? "bg-green-600 text-white hover:bg-green-700"
-                  : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-              }`}
+                  ? "voice-tutor__action"
+                  : "voice-tutor__action--secondary"
+              }
             >
               {isMuted ? "🔊 Unmute" : "🔇 Mute"}
             </button>
 
-            {/* Stop */}
-            <button
-              onClick={stopVoice}
-              className="rounded-full bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-700"
-            >
+            <button onClick={stopVoice} className="voice-tutor__action--danger">
               ⏹ Stop Voice Tutor
             </button>
           </>
         )}
 
-        {/* Error */}
         {status === "error" && (
           <>
             {canReconnect && (
-              <button
-                onClick={reconnectVoice}
-                className="rounded-full bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
-              >
+              <button onClick={reconnectVoice} className="voice-tutor__action">
                 🔄 Reconnect
               </button>
             )}
 
             <button
               onClick={stopVoice}
-              className="rounded-full bg-gray-200 px-6 py-3 font-semibold text-gray-800 transition hover:bg-gray-300"
+              className="voice-tutor__action--secondary"
             >
               ✕ Close
             </button>
@@ -2373,12 +2265,8 @@ Rules:
         )}
       </div>
 
-      {/* ------------------------------------------ */}
-      {/* Help text */}
-      {/* ------------------------------------------ */}
-
       {status !== "idle" && status !== "error" && (
-        <p className="mt-3 text-center text-xs text-gray-500">
+        <p className="voice-tutor__hint">
           {isMuted
             ? "🔇 Your microphone is muted. EduMate can still speak."
             : "🎤 You can interrupt EduMate or mute your microphone anytime."}

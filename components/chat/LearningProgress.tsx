@@ -26,20 +26,15 @@ interface LearningSummary {
 }
 
 export default function LearningProgress() {
-  const [progressOpen, setProgressOpen] =
-    useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
 
-  const [summary, setSummary] =
-    useState<LearningSummary | null>(null);
+  const [summary, setSummary] = useState<LearningSummary | null>(null);
 
-  const [topics, setTopics] =
-    useState<LearningTopic[]>([]);
+  const [topics, setTopics] = useState<LearningTopic[]>([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -47,26 +42,18 @@ export default function LearningProgress() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          "/api/learning-progress",
-        );
+        const response = await fetch("/api/learning-progress");
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.error ||
-              "Failed to load learning progress",
-          );
+          throw new Error(data.error || "Failed to load learning progress");
         }
 
         setSummary(data.summary);
         setTopics(data.topics ?? []);
       } catch (error) {
-        console.error(
-          "Failed to load learning progress:",
-          error,
-        );
+        console.error("Failed to load learning progress:", error);
 
         setError(
           error instanceof Error
@@ -84,9 +71,7 @@ export default function LearningProgress() {
   if (loading) {
     return (
       <div className="border-b bg-white px-6 py-3">
-        <p className="text-sm text-gray-500">
-          📊 Loading your progress...
-        </p>
+        <p className="text-sm text-gray-500">📊 Loading your progress...</p>
       </div>
     );
   }
@@ -104,26 +89,16 @@ export default function LearningProgress() {
       {/* Progress Header */}
       <button
         type="button"
-        onClick={() =>
-          setProgressOpen(
-            (previous) => !previous,
-          )
-        }
+        onClick={() => setProgressOpen((previous) => !previous)}
         className="flex w-full items-center justify-between px-6 py-3 text-left hover:bg-gray-50"
       >
         <div>
-          <h2 className="font-semibold">
-            📊 My Learning Progress
-          </h2>
+          <h2 className="font-semibold">📊 My Learning Progress</h2>
 
-          <p className="text-sm text-gray-500">
-            Track your learning journey
-          </p>
+          <p className="text-sm text-gray-500">Track your learning journey</p>
         </div>
 
-        <span className="text-lg">
-          {progressOpen ? "▲" : "▼"}
-        </span>
+        <span className="text-lg">{progressOpen ? "▲" : "▼"}</span>
       </button>
 
       {/* Progress Content */}
@@ -132,9 +107,7 @@ export default function LearningProgress() {
           {/* Overall statistics */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="rounded-lg border p-3">
-              <p className="text-xs text-gray-500">
-                Topics
-              </p>
+              <p className="text-xs text-gray-500">Topics</p>
 
               <p className="mt-1 text-xl font-semibold">
                 {summary.totalTopics}
@@ -142,9 +115,7 @@ export default function LearningProgress() {
             </div>
 
             <div className="rounded-lg border p-3">
-              <p className="text-xs text-gray-500">
-                Questions
-              </p>
+              <p className="text-xs text-gray-500">Questions</p>
 
               <p className="mt-1 text-xl font-semibold">
                 {summary.totalQuestions}
@@ -152,9 +123,7 @@ export default function LearningProgress() {
             </div>
 
             <div className="rounded-lg border p-3">
-              <p className="text-xs text-gray-500">
-                Accuracy
-              </p>
+              <p className="text-xs text-gray-500">Accuracy</p>
 
               <p className="mt-1 text-xl font-semibold">
                 {summary.overallAccuracy}%
@@ -162,9 +131,7 @@ export default function LearningProgress() {
             </div>
 
             <div className="rounded-lg border p-3">
-              <p className="text-xs text-gray-500">
-                Mastered
-              </p>
+              <p className="text-xs text-gray-500">Mastered</p>
 
               <p className="mt-1 text-xl font-semibold">
                 {summary.masteredTopics}
@@ -174,33 +141,23 @@ export default function LearningProgress() {
 
           {/* Topic progress */}
           <div className="mt-5">
-            <h3 className="mb-3 font-semibold">
-              📚 Topic Progress
-            </h3>
+            <h3 className="mb-3 font-semibold">📚 Topic Progress</h3>
 
             <div className="space-y-3">
               {topics.map((topic) => (
-                <div
-                  key={topic.id}
-                  className="rounded-lg border p-3"
-                >
+                <div key={topic.id} className="rounded-lg border p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold">
-                        {topic.topic}
-                      </p>
+                      <p className="font-semibold">{topic.topic}</p>
 
                       <p className="text-xs text-gray-500">
-                        {topic.subject ??
-                          "General"}
+                        {topic.subject ?? "General"}
                         {" · "}
                         {topic.mastery_level}
                       </p>
                     </div>
 
-                    <p className="font-semibold">
-                      {topic.accuracy ?? 0}%
-                    </p>
+                    <p className="font-semibold">{topic.accuracy ?? 0}%</p>
                   </div>
 
                   {/* Progress bar */}
@@ -208,29 +165,17 @@ export default function LearningProgress() {
                     <div
                       className="h-2 rounded-full bg-black"
                       style={{
-                        width: `${Math.min(
-                          topic.accuracy ?? 0,
-                          100,
-                        )}%`,
+                        width: `${Math.min(topic.accuracy ?? 0, 100)}%`,
                       }}
                     />
                   </div>
 
                   <div className="mt-2 flex justify-between text-xs text-gray-500">
-                    <span>
-                      Questions:{" "}
-                      {topic.questions_asked}
-                    </span>
+                    <span>Questions: {topic.questions_asked}</span>
 
-                    <span>
-                      Correct:{" "}
-                      {topic.correct_answers}
-                    </span>
+                    <span>Correct: {topic.correct_answers}</span>
 
-                    <span>
-                      Incorrect:{" "}
-                      {topic.incorrect_answers}
-                    </span>
+                    <span>Incorrect: {topic.incorrect_answers}</span>
                   </div>
                 </div>
               ))}

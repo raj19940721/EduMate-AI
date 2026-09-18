@@ -12,15 +12,11 @@ export async function GET() {
       .limit(50);
 
     if (error) {
-      console.error(
-        "Failed to load observability logs:",
-        error,
-      );
+      console.error("Failed to load observability logs:", error);
 
       return NextResponse.json(
         {
-          error:
-            "Failed to load observability logs.",
+          error: "Failed to load observability logs.",
         },
         { status: 500 },
       );
@@ -30,49 +26,31 @@ export async function GET() {
 
     const totalRequests = logs.length;
 
-    const average = (
-      values: number[],
-    ) =>
+    const average = (values: number[]) =>
       values.length > 0
-        ? values.reduce(
-            (sum, value) => sum + value,
-            0,
-          ) / values.length
+        ? values.reduce((sum, value) => sum + value, 0) / values.length
         : 0;
 
-    const averageTotalTime = average(
-      logs.map(
-        (log) => log.total_time_ms ?? 0,
-      ),
-    );
+    const averageTotalTime = average(logs.map((log) => log.total_time_ms ?? 0));
 
     const averageEmbeddingTime = average(
-      logs.map(
-        (log) =>
-          log.embedding_time_ms ?? 0,
-      ),
+      logs.map((log) => log.embedding_time_ms ?? 0),
     );
 
     const averageRetrievalTime = average(
-      logs.map(
-        (log) =>
-          log.retrieval_time_ms ?? 0,
-      ),
+      logs.map((log) => log.retrieval_time_ms ?? 0),
     );
 
     const highRelevance = logs.filter(
-      (log) =>
-        log.top_relevance === "high",
+      (log) => log.top_relevance === "high",
     ).length;
 
     const mediumRelevance = logs.filter(
-      (log) =>
-        log.top_relevance === "medium",
+      (log) => log.top_relevance === "medium",
     ).length;
 
     const lowRelevance = logs.filter(
-      (log) =>
-        log.top_relevance === "low",
+      (log) => log.top_relevance === "low",
     ).length;
 
     return NextResponse.json({
@@ -88,15 +66,11 @@ export async function GET() {
       logs,
     });
   } catch (error) {
-    console.error(
-      "Observability API error:",
-      error,
-    );
+    console.error("Observability API error:", error);
 
     return NextResponse.json(
       {
-        error:
-          "Failed to load observability data.",
+        error: "Failed to load observability data.",
       },
       { status: 500 },
     );

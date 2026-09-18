@@ -17,24 +17,17 @@ export default function DailyLearningGoal() {
   useEffect(() => {
     const loadGoal = async () => {
       try {
-        const response = await fetch(
-          "/api/daily-learning-goal",
-        );
+        const response = await fetch("/api/daily-learning-goal");
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.error || "Failed to load daily goal",
-          );
+          throw new Error(data.error || "Failed to load daily goal");
         }
 
         setGoal(data.goal);
       } catch (error) {
-        console.error(
-          "Daily learning goal error:",
-          error,
-        );
+        console.error("Daily learning goal error:", error);
       } finally {
         setLoading(false);
       }
@@ -51,11 +44,7 @@ export default function DailyLearningGoal() {
     goal.targetQuestions > 0
       ? Math.min(
           100,
-          Math.round(
-            (goal.completedQuestions /
-              goal.targetQuestions) *
-              100,
-          ),
+          Math.round((goal.completedQuestions / goal.targetQuestions) * 100),
         )
       : 0;
 
@@ -63,30 +52,22 @@ export default function DailyLearningGoal() {
     <div className="w-full border-b bg-white">
       <button
         type="button"
-        onClick={() =>
-          setOpen((previous) => !previous)
-        }
+        onClick={() => setOpen((previous) => !previous)}
         className="flex w-full items-center justify-between px-6 py-3 text-left hover:bg-gray-50"
       >
         <div>
-          <h2 className="font-semibold">
-            🎯 Today's Learning Goal
-          </h2>
+          <h2 className="font-semibold">🎯 Today's Learning Goal</h2>
 
           <p className="text-sm text-gray-500">
             {goal.completed
               ? "Great job! You completed today's goal."
               : `Answer ${goal.remainingQuestions} more question${
-                  goal.remainingQuestions === 1
-                    ? ""
-                    : "s"
+                  goal.remainingQuestions === 1 ? "" : "s"
                 } today.`}
           </p>
         </div>
 
-        <span className="text-lg">
-          {open ? "▲" : "▼"}
-        </span>
+        <span className="text-lg">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
@@ -94,13 +75,10 @@ export default function DailyLearningGoal() {
           {/* Progress header */}
 
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">
-              Questions
-            </span>
+            <span className="text-sm font-medium">Questions</span>
 
             <span className="text-sm text-gray-500">
-              {goal.completedQuestions} /{" "}
-              {goal.targetQuestions}
+              {goal.completedQuestions} / {goal.targetQuestions}
             </span>
           </div>
 

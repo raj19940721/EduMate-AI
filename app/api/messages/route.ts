@@ -20,8 +20,7 @@ export async function GET(request: Request) {
 
     // Get conversation ID from URL
     const { searchParams } = new URL(request.url);
-    const conversationId =
-      searchParams.get("conversationId");
+    const conversationId = searchParams.get("conversationId");
 
     if (!conversationId) {
       return NextResponse.json(
@@ -31,21 +30,17 @@ export async function GET(request: Request) {
     }
 
     // Load messages
-    const { data: messages, error: messagesError } =
-      await supabase
-        .from("messages")
-        .select("id, role, content, created_at")
-        .eq("conversation_id", conversationId)
-        .eq("user_id", user.id)
-        .order("created_at", {
-          ascending: true,
-        });
+    const { data: messages, error: messagesError } = await supabase
+      .from("messages")
+      .select("id, role, content, created_at")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", user.id)
+      .order("created_at", {
+        ascending: true,
+      });
 
     if (messagesError) {
-      console.error(
-        "Messages query error:",
-        messagesError,
-      );
+      console.error("Messages query error:", messagesError);
 
       return NextResponse.json(
         { error: messagesError.message },
@@ -62,9 +57,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to load messages",
+          error instanceof Error ? error.message : "Failed to load messages",
       },
       { status: 500 },
     );

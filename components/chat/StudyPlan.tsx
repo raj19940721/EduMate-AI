@@ -23,13 +23,7 @@ type StudyPlanResponse = {
   success: boolean;
   source?: "saved" | "generated" | "existing" | "not_generated";
   message?: string;
-
-  student?: {
-    name: string;
-    grade: number;
-    subject: string;
-  };
-
+  student?: { name: string; grade: number; subject: string };
   plan?: {
     id: string;
     title: string;
@@ -38,9 +32,7 @@ type StudyPlanResponse = {
     endDate: string;
     status: string;
   };
-
   studyPlan: StudyPlanItem[];
-
   summary: {
     totalTopics: number;
     highPriority: number;
@@ -48,32 +40,23 @@ type StudyPlanResponse = {
     lowPriority: number;
     totalDurationMinutes: number;
   };
-
   error?: string;
 };
 
-type DayGroup = {
-  date: string;
-  items: StudyPlanItem[];
-};
+type DayGroup = { date: string; items: StudyPlanItem[] };
 
 function getActivityIcon(activityType: string) {
   switch (activityType) {
     case "learn":
       return "📚";
-
     case "practice":
       return "✏️";
-
     case "quiz":
       return "🧠";
-
     case "review":
       return "📖";
-
     case "homework":
       return "📝";
-
     default:
       return "📚";
   }
@@ -83,19 +66,14 @@ function getActivityButtonLabel(activityType: string) {
   switch (activityType) {
     case "learn":
       return "▶ Start Learning";
-
     case "practice":
       return "▶ Start Practice";
-
     case "quiz":
       return "▶ Start Quiz";
-
     case "review":
       return "▶ Start Review";
-
     case "homework":
       return "▶ Start Homework";
-
     default:
       return "▶ Start Activity";
   }
@@ -104,35 +82,28 @@ function getActivityButtonLabel(activityType: string) {
 function getActivityTypeClass(activityType: string) {
   switch (activityType) {
     case "learn":
-      return "bg-blue-50 text-blue-700";
-
+      return "study-plan__pill study-plan__pill--blue";
     case "practice":
-      return "bg-purple-50 text-purple-700";
-
+      return "study-plan__pill study-plan__pill--purple";
     case "quiz":
-      return "bg-orange-50 text-orange-700";
-
+      return "study-plan__pill study-plan__pill--orange";
     case "review":
-      return "bg-green-50 text-green-700";
-
+      return "study-plan__pill study-plan__pill--green";
     case "homework":
-      return "bg-pink-50 text-pink-700";
-
+      return "study-plan__pill study-plan__pill--pink";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "study-plan__pill";
   }
 }
 
 function getStatusClass(status: string) {
   switch (status) {
     case "completed":
-      return "bg-green-100 text-green-700";
-
+      return "study-plan__status study-plan__status--success";
     case "in_progress":
-      return "bg-blue-100 text-blue-700";
-
+      return "study-plan__status study-plan__status--active";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "study-plan__status";
   }
 }
 
@@ -140,550 +111,271 @@ function getStatusLabel(status: string) {
   switch (status) {
     case "pending":
       return "Not Started";
-
     case "in_progress":
       return "In Progress";
-
     case "completed":
       return "Completed";
-
     default:
       return status.replaceAll("_", " ");
   }
 }
 
 function formatDate(dateString: string) {
-  const [year, month, day] = dateString
-    .split("-")
-    .map(Number);
-
-  if (!year || !month || !day) {
-    return dateString;
-  }
+  const [year, month, day] = dateString.split("-").map(Number);
+  if (!year || !month || !day) return dateString;
 
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(
-    new Date(
-      year,
-      month - 1,
-      day,
-    ),
-  );
+  }).format(new Date(year, month - 1, day));
 }
 
 function formatDayName(dateString: string) {
-  const [year, month, day] = dateString
-    .split("-")
-    .map(Number);
+  const [year, month, day] = dateString.split("-").map(Number);
+  if (!year || !month || !day) return "";
 
-  if (!year || !month || !day) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat("en-IN", {
-    weekday: "long",
-  }).format(
-    new Date(
-      year,
-      month - 1,
-      day,
-    ),
+  return new Intl.DateTimeFormat("en-IN", { weekday: "long" }).format(
+    new Date(year, month - 1, day),
   );
 }
 
 function getTodayDate() {
-  const parts = new Intl.DateTimeFormat(
-    "en-CA",
-    {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    },
-  ).formatToParts(new Date());
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
 
-  const year = parts.find(
-    (part) => part.type === "year",
-  )?.value;
-
-  const month = parts.find(
-    (part) => part.type === "month",
-  )?.value;
-
-  const day = parts.find(
-    (part) => part.type === "day",
-  )?.value;
-
-  if (!year || !month || !day) {
-    return "";
-  }
-
+  if (!year || !month || !day) return "";
   return `${year}-${month}-${day}`;
 }
 
-function getDayLabel(
-  date: string,
-  today: string,
-) {
-  if (date === today) {
-    return "Today";
-  }
-
+function getDayLabel(date: string, today: string) {
+  if (date === today) return "Today";
   return formatDayName(date);
 }
 
-function groupActivitiesByDate(
-  activities: StudyPlanItem[],
-): DayGroup[] {
-  const groups = new Map<
-    string,
-    StudyPlanItem[]
-  >();
+function groupActivitiesByDate(activities: StudyPlanItem[]): DayGroup[] {
+  const groups = new Map<string, StudyPlanItem[]>();
 
   for (const item of activities) {
-    const existing =
-      groups.get(item.scheduledDate);
-
+    const existing = groups.get(item.scheduledDate);
     if (existing) {
       existing.push(item);
     } else {
-      groups.set(item.scheduledDate, [
-        item,
-      ]);
+      groups.set(item.scheduledDate, [item]);
     }
   }
 
-  return Array.from(groups.entries()).map(
-    ([date, items]) => ({
-      date,
-      items,
-    }),
-  );
+  return Array.from(groups.entries()).map(([date, items]) => ({ date, items }));
 }
 
 export default function StudyPlan() {
-  const [data, setData] =
-    useState<StudyPlanResponse | null>(
-      null,
-    );
+  const [data, setData] = useState<StudyPlanResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [refreshing, setRefreshing] =
-    useState(false);
-
-  const [updatingId, setUpdatingId] =
-    useState<string | null>(null);
-
-  const [error, setError] =
-    useState("");
-
-  const [expandedDays, setExpandedDays] =
-    useState<Record<string, boolean>>({});
-
-  // --------------------------------------------------
-  // Load study plan
-  // --------------------------------------------------
-
-  const loadStudyPlan = useCallback(
-    async (isRefresh = false) => {
-      try {
-        if (isRefresh) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
-
-        setError("");
-
-        const response = await fetch(
-          "/api/study-plan",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          },
-        );
-
-        const result =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.error ||
-              "Failed to load study plan",
-          );
-        }
-
-        if (
-          !result ||
-          typeof result !== "object" ||
-          !Array.isArray(result.studyPlan)
-        ) {
-          throw new Error(
-            "Invalid study plan response",
-          );
-        }
-
-        setData(result);
-      } catch (error) {
-        console.error(
-          "Study plan load error:",
-          error,
-        );
-
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load study plan",
-        );
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+  const loadStudyPlan = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
-    },
-    [],
-  );
+
+      setError("");
+
+      const response = await fetch("/api/study-plan", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to load study plan");
+      }
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        !Array.isArray(result.studyPlan)
+      ) {
+        throw new Error("Invalid study plan response");
+      }
+
+      setData(result);
+    } catch (error) {
+      console.error("Study plan load error:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to load study plan",
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     void loadStudyPlan();
   }, [loadStudyPlan]);
 
-  // --------------------------------------------------
-  // Study Plan → Quiz
-  // --------------------------------------------------
-
-  const launchQuizActivity = (
-    item: StudyPlanItem,
-  ) => {
+  const launchQuizActivity = (item: StudyPlanItem) => {
     window.dispatchEvent(
-      new CustomEvent(
-        "edumate:start-quiz",
-        {
-          detail: {
-            topic: item.topic,
-            studyPlanId: item.id,
-          },
-        },
-      ),
+      new CustomEvent("edumate:start-quiz", {
+        detail: { topic: item.topic, studyPlanId: item.id },
+      }),
     );
   };
 
-  // --------------------------------------------------
-  // Study Plan → Practice
-  // --------------------------------------------------
-
-  const launchPracticeActivity = (
-    item: StudyPlanItem,
-  ) => {
+  const launchPracticeActivity = (item: StudyPlanItem) => {
     window.dispatchEvent(
-      new CustomEvent(
-        "edumate:start-practice",
-        {
-          detail: {
-            topic: item.topic,
-            studyPlanId: item.id,
-          },
-        },
-      ),
+      new CustomEvent("edumate:start-practice", {
+        detail: { topic: item.topic, studyPlanId: item.id },
+      }),
     );
   };
 
-  // --------------------------------------------------
-  // Study Plan → Review
-  // --------------------------------------------------
-
-  const launchReviewActivity = (
-    item: StudyPlanItem,
-  ) => {
+  const launchReviewActivity = (item: StudyPlanItem) => {
     window.dispatchEvent(
-      new CustomEvent(
-        "edumate:start-review",
-        {
-          detail: {
-            topic: item.topic,
-            studyPlanId: item.id,
-          },
-        },
-      ),
+      new CustomEvent("edumate:start-review", {
+        detail: { topic: item.topic, studyPlanId: item.id },
+      }),
     );
   };
 
-  // --------------------------------------------------
-  // Study Plan → Homework
-  // --------------------------------------------------
-
-  const launchHomeworkActivity = (
-    item: StudyPlanItem,
-  ) => {
+  const launchHomeworkActivity = (item: StudyPlanItem) => {
     window.dispatchEvent(
-      new CustomEvent(
-        "edumate:start-homework",
-        {
-          detail: {
-            topic: item.topic,
-            studyPlanId: item.id,
-          },
-        },
-      ),
+      new CustomEvent("edumate:start-homework", {
+        detail: { topic: item.topic, studyPlanId: item.id },
+      }),
     );
   };
-
-  // --------------------------------------------------
-  // Update activity status
-  // --------------------------------------------------
 
   const updateActivityStatus = async (
     id: string,
-    status:
-      | "in_progress"
-      | "completed",
+    status: "in_progress" | "completed",
   ) => {
     try {
       setUpdatingId(id);
       setError("");
 
-      const response = await fetch(
-        `/api/study-plan/${id}`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            status,
-          }),
-        },
-      );
+      const response = await fetch(`/api/study-plan/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
 
-      const result =
-        await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.error ||
-            "Failed to update study activity",
-        );
+        throw new Error(result.error || "Failed to update study activity");
       }
 
       await loadStudyPlan(true);
-
       return result.studyPlan;
     } catch (error) {
-      console.error(
-        "Study plan update error:",
-        error,
-      );
-
+      console.error("Study plan update error:", error);
       setError(
         error instanceof Error
           ? error.message
           : "Failed to update study activity",
       );
-
       return null;
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // --------------------------------------------------
-  // Start activity
-  // --------------------------------------------------
-
-  const handleStartActivity = async (
-    item: StudyPlanItem,
-  ) => {
-    const updated =
-      await updateActivityStatus(
-        item.id,
-        "in_progress",
-      );
-
-    if (!updated) {
-      return;
-    }
+  const handleStartActivity = async (item: StudyPlanItem) => {
+    const updated = await updateActivityStatus(item.id, "in_progress");
+    if (!updated) return;
 
     switch (item.activityType) {
       case "quiz":
         launchQuizActivity(item);
         break;
-
       case "practice":
         launchPracticeActivity(item);
         break;
-
       case "review":
         launchReviewActivity(item);
         break;
-
       case "homework":
         launchHomeworkActivity(item);
         break;
-
       default:
-        // Learn activities can be completed
-        // after starting.
         break;
     }
   };
 
-  // --------------------------------------------------
-  // Quiz → Study Plan
-  // --------------------------------------------------
-
   useEffect(() => {
-    const handleQuizCompleted = async (
-      event: Event,
-    ) => {
-      const customEvent =
-        event as CustomEvent<{
-          topic?: string;
-        }>;
-
-      const topic =
-        customEvent.detail?.topic?.trim();
-
-      if (!topic) {
-        return;
-      }
+    const handleQuizCompleted = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ topic?: string }>;
+      const topic = customEvent.detail?.topic?.trim();
+      if (!topic) return;
 
       try {
-        console.log(
-          "Quiz completed event received:",
-          topic,
-        );
-
-        const response = await fetch(
-          "/api/study-plan",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          },
-        );
-
-        const latestPlan: StudyPlanResponse =
-          await response.json();
+        const response = await fetch("/api/study-plan", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+        const latestPlan: StudyPlanResponse = await response.json();
 
         if (!response.ok) {
           throw new Error(
-            latestPlan.error ||
-              "Failed to load latest study plan",
+            latestPlan.error || "Failed to load latest study plan",
           );
         }
 
-        const matchingActivity =
-          latestPlan.studyPlan.find(
-            (item) =>
-              item.topic.toLowerCase() ===
-                topic.toLowerCase() &&
-              item.activityType ===
-                "quiz" &&
-              item.status ===
-                "in_progress",
-          );
-
-        if (!matchingActivity) {
-          console.log(
-            "No matching in-progress quiz found.",
-          );
-
-          return;
-        }
-
-        await updateActivityStatus(
-          matchingActivity.id,
-          "completed",
+        const matchingActivity = latestPlan.studyPlan.find(
+          (item) =>
+            item.topic.toLowerCase() === topic.toLowerCase() &&
+            item.activityType === "quiz" &&
+            item.status === "in_progress",
         );
+
+        if (!matchingActivity) return;
+        await updateActivityStatus(matchingActivity.id, "completed");
       } catch (error) {
-        console.error(
-          "Failed to complete Study Plan quiz:",
-          error,
-        );
+        console.error("Failed to complete Study Plan quiz:", error);
       }
     };
 
-    window.addEventListener(
-      "edumate:quiz-completed",
-      handleQuizCompleted,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "edumate:quiz-completed",
-        handleQuizCompleted,
-      );
-    };
+    window.addEventListener("edumate:quiz-completed", handleQuizCompleted);
+    return () =>
+      window.removeEventListener("edumate:quiz-completed", handleQuizCompleted);
   }, [loadStudyPlan]);
 
-  // --------------------------------------------------
-  // Today's date
-  // --------------------------------------------------
-
-  const today = useMemo(
-    () => getTodayDate(),
-    [],
-  );
-
-  // --------------------------------------------------
-  // Progress
-  // --------------------------------------------------
+  const today = useMemo(() => getTodayDate(), []);
 
   const progress = useMemo(() => {
-    const items =
-      data?.studyPlan ?? [];
-
-    const completedCount =
-      items.filter(
-        (item) =>
-          item.status ===
-          "completed",
-      ).length;
-
-    const inProgressCount =
-      items.filter(
-        (item) =>
-          item.status ===
-          "in_progress",
-      ).length;
-
+    const items = data?.studyPlan ?? [];
+    const completedCount = items.filter(
+      (item) => item.status === "completed",
+    ).length;
+    const inProgressCount = items.filter(
+      (item) => item.status === "in_progress",
+    ).length;
     const percentage =
-      items.length > 0
-        ? Math.round(
-            (completedCount /
-              items.length) *
-              100,
-          )
-        : 0;
-
-    const todayItems =
-      items.filter(
-        (item) =>
-          item.scheduledDate ===
-          today,
-      );
-
-    const todayCompleted =
-      todayItems.filter(
-        (item) =>
-          item.status ===
-          "completed",
-      ).length;
-
+      items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0;
+    const todayItems = items.filter((item) => item.scheduledDate === today);
+    const todayCompleted = todayItems.filter(
+      (item) => item.status === "completed",
+    ).length;
     const todayPercentage =
       todayItems.length > 0
-        ? Math.round(
-            (todayCompleted /
-              todayItems.length) *
-              100,
-          )
+        ? Math.round((todayCompleted / todayItems.length) * 100)
         : 0;
 
     return {
@@ -696,87 +388,42 @@ export default function StudyPlan() {
     };
   }, [data, today]);
 
-  // --------------------------------------------------
-  // Group by day
-  // --------------------------------------------------
-
   const dayGroups = useMemo(
-    () =>
-      groupActivitiesByDate(
-        data?.studyPlan ?? [],
-      ),
+    () => groupActivitiesByDate(data?.studyPlan ?? []),
     [data],
   );
 
-  // --------------------------------------------------
-  // Expand/collapse
-  // --------------------------------------------------
-
   useEffect(() => {
-    if (dayGroups.length === 0) {
-      return;
-    }
+    if (dayGroups.length === 0) return;
 
-    const initialState: Record<
-      string,
-      boolean
-    > = {};
-
+    const initialState: Record<string, boolean> = {};
     for (const group of dayGroups) {
-      initialState[group.date] =
-        group.date === today;
+      initialState[group.date] = group.date === today;
     }
 
     setExpandedDays(initialState);
   }, [dayGroups, today]);
 
-  const toggleDay = (
-    date: string,
-  ) => {
-    setExpandedDays((previous) => ({
-      ...previous,
-      [date]:
-        !previous[date],
-    }));
+  const toggleDay = (date: string) => {
+    setExpandedDays((previous) => ({ ...previous, [date]: !previous[date] }));
   };
-
-  // --------------------------------------------------
-  // Loading
-  // --------------------------------------------------
 
   if (loading) {
     return (
-      <div className="w-full border-b bg-white px-6 py-5">
-        <div className="animate-pulse">
-          <div className="h-6 w-52 rounded bg-gray-200" />
-
-          <div className="mt-2 h-4 w-80 rounded bg-gray-200" />
-
-          <div className="mt-5 h-24 rounded-xl bg-gray-100" />
-
-          <div className="mt-4 h-32 rounded-xl bg-gray-100" />
-        </div>
+      <div className="study-plan study-plan--loading">
+        <div className="study-plan__skeleton" />
       </div>
     );
   }
 
-  // --------------------------------------------------
-  // Error
-  // --------------------------------------------------
-
   if (error && !data) {
     return (
-      <div className="w-full border-b bg-white px-6 py-5">
-        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
-          {error}
-        </div>
-
+      <div className="study-plan study-plan--error">
+        <div className="study-plan__error-card">{error}</div>
         <button
           type="button"
-          onClick={() =>
-            void loadStudyPlan(true)
-          }
-          className="mt-3 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          onClick={() => void loadStudyPlan(true)}
+          className="study-plan__retry-button"
         >
           Try Again
         </button>
@@ -784,464 +431,248 @@ export default function StudyPlan() {
     );
   }
 
-  const studyPlan =
-    data?.studyPlan ?? [];
-
-  const plan =
-    data?.plan;
+  const studyPlan = data?.studyPlan ?? [];
+  const plan = data?.plan;
 
   return (
-    <div className="w-full border-b bg-white">
-      {/* ------------------------------------------------
-          Header
-      ------------------------------------------------ */}
-
-      <div className="px-6 py-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-gray-900">
-                🎯 Personal Study Plan
-              </h2>
-
-              {data?.student?.grade && (
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                  Grade {data.student.grade}
-                </span>
-              )}
-            </div>
-
-            <p className="mt-1 text-sm text-gray-500">
-              {plan?.title ??
-                "Your personalized 7-day learning journey"}
-            </p>
-
-            {plan && (
-              <p className="mt-1 text-xs text-gray-400">
-                {formatDate(
-                  plan.startDate,
-                )}{" "}
-                →{" "}
-                {formatDate(
-                  plan.endDate,
-                )}
-              </p>
+    <div className="study-plan">
+      <div className="study-plan__header">
+        <div className="study-plan__heading-wrap">
+          <div className="study-plan__title-row">
+            <h2>🎯 Personal Study Plan</h2>
+            {data?.student?.grade && (
+              <span className="study-plan__grade">
+                Grade {data.student.grade}
+              </span>
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              void loadStudyPlan(true)
-            }
-            disabled={refreshing}
-            className="shrink-0 rounded-lg border px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {refreshing
-              ? "Refreshing..."
-              : "↻ Refresh"}
-          </button>
+          <p>{plan?.title ?? "Your personalized 7-day learning journey"}</p>
+          {plan && (
+            <span className="study-plan__range">
+              {formatDate(plan.startDate)} → {formatDate(plan.endDate)}
+            </span>
+          )}
         </div>
+
+        <button
+          type="button"
+          onClick={() => void loadStudyPlan(true)}
+          disabled={refreshing}
+          className="study-plan__refresh-button"
+        >
+          {refreshing ? "Refreshing..." : "↻ Refresh"}
+        </button>
       </div>
 
-      {/* ------------------------------------------------
-          Progress
-      ------------------------------------------------ */}
-
       {studyPlan.length > 0 && (
-        <div className="px-6 pb-4">
-          <div className="rounded-xl border bg-gray-50 p-4">
-            <div className="flex items-center justify-between gap-3">
+        <div className="study-plan__progress-wrap">
+          <div className="study-plan__progress-card">
+            <div className="study-plan__progress-main">
               <div>
-                <div className="text-sm font-semibold text-gray-900">
-                  7-Day Progress
-                </div>
-
-                <div className="mt-1 text-xs text-gray-500">
-                  {progress.completedCount} of{" "}
-                  {studyPlan.length} activities
+                <div className="study-plan__progress-label">7-Day Progress</div>
+                <div className="study-plan__progress-subtitle">
+                  {progress.completedCount} of {studyPlan.length} activities
                   completed
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-xl font-bold text-gray-900">
-                  {progress.percentage}%
-                </div>
-
-                <div className="text-xs text-gray-500">
-                  complete
-                </div>
+              <div className="study-plan__progress-number">
+                <div>{progress.percentage}%</div>
+                <span>complete</span>
               </div>
             </div>
 
-            <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-gray-200">
-              <div
-                className="h-full rounded-full bg-green-500 transition-all duration-500"
-                style={{
-                  width: `${progress.percentage}%`,
-                }}
-              />
+            <div className="study-plan__progress-bar">
+              <span style={{ width: `${progress.percentage}%` }} />
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+            <div className="study-plan__progress-meta">
               <span>
-                📅 Today:{" "}
-                {progress.todayCompleted}/
-                {progress.todayItems.length}
+                📅 Today: {progress.todayCompleted}/{progress.todayItems.length}
               </span>
-
               <span>
-                ⏱️{" "}
-                {data?.summary
-                  .totalDurationMinutes ??
-                  0}{" "}
-                min planned
+                ⏱️ {data?.summary.totalDurationMinutes ?? 0} min planned
               </span>
-
-              {progress.inProgressCount >
-                0 && (
-                <span>
-                  ▶{" "}
-                  {progress.inProgressCount}{" "}
-                  in progress
-                </span>
+              {progress.inProgressCount > 0 && (
+                <span>▶ {progress.inProgressCount} in progress</span>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* ------------------------------------------------
-          Error while data exists
-      ------------------------------------------------ */}
-
-      {error && data && (
-        <div className="mx-6 mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">
-          {error}
-        </div>
-      )}
-
-      {/* ------------------------------------------------
-          Empty state
-      ------------------------------------------------ */}
+      {error && data && <div className="study-plan__inline-error">{error}</div>}
 
       {studyPlan.length === 0 && (
-        <div className="px-6 pb-5">
-          <div className="rounded-xl border border-dashed p-6 text-center">
-            <div className="text-3xl">
-              📚
-            </div>
-
-            <div className="mt-2 font-semibold text-gray-900">
+        <div className="study-plan__empty">
+          <div className="study-plan__empty-card">
+            <div>📚</div>
+            <div className="study-plan__empty-title">
               No study activities yet
             </div>
-
-            <div className="mt-1 text-sm text-gray-500">
-              Continue learning and practicing
-              to build your personalized study
+            <div className="study-plan__empty-copy">
+              Continue learning and practicing to build your personalized study
               plan.
             </div>
           </div>
         </div>
       )}
 
-      {/* ------------------------------------------------
-          7-Day Plan
-      ------------------------------------------------ */}
-
       {studyPlan.length > 0 && (
-        <div className="max-h-[650px] space-y-3 overflow-y-auto px-6 pb-6">
+        <div className="study-plan__day-list">
           {dayGroups.map((group) => {
-            const isToday =
-              group.date === today;
-
-            const isExpanded =
-              expandedDays[group.date] ??
-              false;
-
-            const completed =
-              group.items.filter(
-                (item) =>
-                  item.status ===
-                  "completed",
-              ).length;
-
+            const isToday = group.date === today;
+            const isExpanded = expandedDays[group.date] ?? false;
+            const completed = group.items.filter(
+              (item) => item.status === "completed",
+            ).length;
             const dayPercentage =
               group.items.length > 0
-                ? Math.round(
-                    (completed /
-                      group.items
-                        .length) *
-                      100,
-                  )
+                ? Math.round((completed / group.items.length) * 100)
                 : 0;
 
             return (
               <div
                 key={group.date}
-                className={`overflow-hidden rounded-xl border ${
-                  isToday
-                    ? "border-blue-200 bg-blue-50/30"
-                    : "bg-white"
-                }`}
+                className={`study-plan__day ${isToday ? "is-today" : ""}`}
               >
-                {/* Day header */}
-
                 <button
                   type="button"
-                  onClick={() =>
-                    toggleDay(
-                      group.date,
-                    )
-                  }
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50"
+                  onClick={() => toggleDay(group.date)}
+                  className="study-plan__day-toggle"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${
-                          isToday
-                            ? "bg-blue-100"
-                            : "bg-gray-100"
-                        }`}
-                      >
-                        {isToday
-                          ? "📅"
-                          : "🗓️"}
-                      </div>
+                  <div className="study-plan__day-main">
+                    <div
+                      className={`study-plan__day-icon ${isToday ? "is-today" : ""}`}
+                    >
+                      {isToday ? "📅" : "🗓️"}
+                    </div>
 
+                    <div>
+                      <div className="study-plan__day-label-row">
+                        <span>{getDayLabel(group.date, today)}</span>
+                        {isToday && (
+                          <span className="study-plan__today-badge">TODAY</span>
+                        )}
+                      </div>
+                      <div className="study-plan__day-meta">
+                        {formatDate(group.date)} · {group.items.length}{" "}
+                        activities
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="study-plan__day-side">
+                    <div className="study-plan__day-summary">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-gray-900">
-                            {getDayLabel(
-                              group.date,
-                              today,
-                            )}
-                          </span>
-
-                          {isToday && (
-                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                              TODAY
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-0.5 text-xs text-gray-500">
-                          {formatDate(
-                            group.date,
-                          )}{" "}
-                          ·{" "}
-                          {
-                            group.items
-                              .length
-                          }{" "}
-                          activities
-                        </div>
+                        {completed}/{group.items.length}
                       </div>
+                      <span>{dayPercentage}%</span>
                     </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="hidden text-right sm:block">
-                        <div className="text-xs font-medium text-gray-700">
-                          {completed}/
-                          {
-                            group.items
-                              .length
-                          }
-                        </div>
-
-                        <div className="text-[10px] text-gray-400">
-                          {dayPercentage}%
-                        </div>
-                      </div>
-
-                      <span className="text-gray-400">
-                        {isExpanded
-                          ? "⌃"
-                          : "⌄"}
-                      </span>
-                    </div>
+                    <span className="study-plan__collapse-icon">
+                      {isExpanded ? "⌃" : "⌄"}
+                    </span>
                   </div>
                 </button>
 
-                {/* Day activities */}
-
                 {isExpanded && (
-                  <div className="space-y-3 border-t px-4 py-4">
-                    {group.items.map(
-                      (item) => {
-                        const isUpdating =
-                          updatingId ===
-                          item.id;
+                  <div className="study-plan__day-content">
+                    {group.items.map((item) => {
+                      const isUpdating = updatingId === item.id;
+                      const isCompleted = item.status === "completed";
+                      const isInProgress = item.status === "in_progress";
 
-                        const isCompleted =
-                          item.status ===
-                          "completed";
+                      return (
+                        <div
+                          key={item.id}
+                          className={`study-plan__activity ${isCompleted ? "is-complete" : ""}`}
+                        >
+                          <div className="study-plan__activity-head">
+                            <div
+                              className={`study-plan__activity-icon ${isCompleted ? "is-complete" : ""}`}
+                            >
+                              {isCompleted
+                                ? "✓"
+                                : getActivityIcon(item.activityType)}
+                            </div>
 
-                        const isInProgress =
-                          item.status ===
-                          "in_progress";
-
-                        return (
-                          <div
-                            key={item.id}
-                            className={`rounded-xl border p-4 transition ${
-                              isCompleted
-                                ? "border-green-200 bg-green-50/50"
-                                : "bg-white"
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              {/* Icon */}
-
-                              <div
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${
-                                  isCompleted
-                                    ? "bg-green-100"
-                                    : "bg-gray-100"
-                                }`}
-                              >
-                                {isCompleted
-                                  ? "✓"
-                                  : getActivityIcon(
-                                      item.activityType,
-                                    )}
+                            <div className="study-plan__activity-body">
+                              <div className="study-plan__activity-top">
+                                <div>
+                                  <h3>{item.title}</h3>
+                                  <p>{item.description}</p>
+                                </div>
+                                <span className={getStatusClass(item.status)}>
+                                  {getStatusLabel(item.status)}
+                                </span>
                               </div>
 
-                              {/* Content */}
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h3 className="font-semibold text-gray-900">
-                                      {
-                                        item.title
-                                      }
-                                    </h3>
-
-                                    <p className="mt-1 text-sm leading-5 text-gray-500">
-                                      {
-                                        item.description
-                                      }
-                                    </p>
-                                  </div>
-
-                                  <span
-                                    className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${getStatusClass(
-                                      item.status,
-                                    )}`}
-                                  >
-                                    {getStatusLabel(
-                                      item.status,
-                                    )}
-                                  </span>
-                                </div>
-
-                                {/* Metadata */}
-
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  <span
-                                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${getActivityTypeClass(
-                                      item.activityType,
-                                    )}`}
-                                  >
-                                    {item.activityType}
-                                  </span>
-
-                                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600">
-                                    ⏱️{" "}
-                                    {
-                                      item.durationMinutes
-                                    }{" "}
-                                    min
-                                  </span>
-
-                                  <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600">
-                                    🌱{" "}
-                                    {item.topic}
-                                  </span>
-
-                                  {item.accuracy >
-                                    0 && (
-                                    <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600">
-                                      📊{" "}
-                                      {Math.round(
-                                        item.accuracy,
-                                      )}
-                                      %
-                                    </span>
+                              <div className="study-plan__activity-meta">
+                                <span
+                                  className={getActivityTypeClass(
+                                    item.activityType,
                                   )}
-                                </div>
+                                >
+                                  {item.activityType}
+                                </span>
+                                <span className="study-plan__meta-pill">
+                                  ⏱️ {item.durationMinutes} min
+                                </span>
+                                <span className="study-plan__meta-pill">
+                                  🌱 {item.topic}
+                                </span>
+                                {item.accuracy > 0 && (
+                                  <span className="study-plan__meta-pill">
+                                    📊 {Math.round(item.accuracy)}%
+                                  </span>
+                                )}
+                              </div>
 
-                                {/* Start button */}
+                              {item.status === "pending" && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleStartActivity(item)}
+                                  disabled={isUpdating}
+                                  className="study-plan__primary-button"
+                                >
+                                  {isUpdating
+                                    ? "Starting..."
+                                    : getActivityButtonLabel(item.activityType)}
+                                </button>
+                              )}
 
-                                {item.status ===
-                                  "pending" && (
+                              {isInProgress && (
+                                <div className="study-plan__status-controls">
+                                  <div className="study-plan__in-progress-label">
+                                    ▶ Activity in progress
+                                  </div>
                                   <button
                                     type="button"
                                     onClick={() =>
-                                      void handleStartActivity(
-                                        item,
+                                      void updateActivityStatus(
+                                        item.id,
+                                        "completed",
                                       )
                                     }
-                                    disabled={
-                                      isUpdating
-                                    }
-                                    className="mt-3 w-full rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={isUpdating}
+                                    className="study-plan__secondary-button"
                                   >
-                                    {isUpdating
-                                      ? "Starting..."
-                                      : getActivityButtonLabel(
-                                          item.activityType,
-                                        )}
+                                    {isUpdating ? "Updating..." : "✓ Complete"}
                                   </button>
-                                )}
+                                </div>
+                              )}
 
-                                {/* In progress */}
-
-                                {isInProgress && (
-                                  <div className="mt-3 flex gap-2">
-                                    <div className="flex flex-1 items-center justify-center rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
-                                      ▶ Activity in
-                                      progress
-                                    </div>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        void updateActivityStatus(
-                                          item.id,
-                                          "completed",
-                                        )
-                                      }
-                                      disabled={
-                                        isUpdating
-                                      }
-                                      className="rounded-lg border px-4 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                                    >
-                                      {isUpdating
-                                        ? "Updating..."
-                                        : "✓ Complete"}
-                                    </button>
-                                  </div>
-                                )}
-
-                                {/* Completed */}
-
-                                {isCompleted && (
-                                  <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-center text-xs font-medium text-green-700">
-                                    🎉 Great job!
-                                    You completed
-                                    this activity.
-                                  </div>
-                                )}
-                              </div>
+                              {isCompleted && (
+                                <div className="study-plan__completed-banner">
+                                  🎉 Great job! You completed this activity.
+                                </div>
+                              )}
                             </div>
                           </div>
-                        );
-                      },
-                    )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
