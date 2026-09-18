@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const features = [
   {
     icon: "⚡",
@@ -59,10 +61,10 @@ export function LandingPage() {
 
       <header className="topbar">
         <div className="topbar__inner">
-          <div className="brand" aria-label="EduMate AI home">
+          <Link href="/" className="brand" aria-label="EduMate AI home">
             <span className="brand-mark">E</span>
             <span>EduMate AI</span>
-          </div>
+          </Link>
 
           <nav className="nav" aria-label="Main navigation">
             <a href="#features" className="nav__link">
@@ -80,12 +82,12 @@ export function LandingPage() {
           </nav>
 
           <div className="header-actions">
-            <button type="button" className="secondary-button">
+            <Link href="/login" className="secondary-button">
               Log in
-            </button>
-            <button type="button" className="primary-button">
+            </Link>
+            <Link href="/signup" className="primary-button">
               Get started
-            </button>
+            </Link>
           </div>
         </div>
       </header>
@@ -111,12 +113,12 @@ export function LandingPage() {
               </p>
 
               <div className="hero__actions">
-                <button type="button" className="primary-button">
+                <Link href="/signup" className="primary-button">
                   Start learning
-                </button>
-                <button type="button" className="secondary-button">
+                </Link>
+                <a href="#how-it-works" className="secondary-button">
                   Watch demo
-                </button>
+                </a>
               </div>
 
               <div className="hero__meta">
@@ -262,9 +264,9 @@ export function LandingPage() {
               </p>
             </div>
 
-            <button type="button" className="ghost-button">
+            <Link href="/signup" className="ghost-button">
               Start free
-            </button>
+            </Link>
           </div>
         </section>
       </main>

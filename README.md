@@ -5,6 +5,7 @@ EduMate AI is a Next.js learning platform built for personalized student support
 ## Overview
 
 The app is designed around a student-first learning experience:
+
 - AI-powered chat tutor for questions and explanations
 - adaptive learning tools and personalized study plans
 - progress tracking with streaks, achievements, recommendations, and memory
@@ -15,6 +16,7 @@ The app is designed around a student-first learning experience:
 ## Core features
 
 ### Learning experience
+
 - AI chat assistant for student questions
 - Personal study plan generation and review flows
 - Smart review and learning recommendations
@@ -24,6 +26,7 @@ The app is designed around a student-first learning experience:
 - Voice tutor using live audio interactions
 
 ### Student data and personalization
+
 - Student profile management
 - Learning memory and recommendation tracking
 - Learning achievements and progress calculations
@@ -31,6 +34,7 @@ The app is designed around a student-first learning experience:
 - Knowledge search and update endpoints
 
 ### AI and evaluation
+
 - Gemini-based AI integration for tutoring and learning generation
 - RAG evaluation and observability routes
 - Knowledge and retrieval pipeline support
@@ -114,6 +118,7 @@ GEMINI_API_KEY=your_gemini_api_key
 ```
 
 Notes:
+
 - The app expects Supabase to be configured for authentication and data access.
 - Gemini is used for AI chat, question evaluation, recommendations, homework support, and voice flows.
 - If `MOCK_AI=true` is set in the environment, mock AI behavior can be enabled for certain routes.
@@ -153,17 +158,22 @@ npm run format   # format the project with Prettier
 ## Key user journeys
 
 ### Student login and onboarding
+
 The app includes login, signup, forgot-password, and reset-password flows using Supabase auth and shared UI styling.
 
 ### Chat and tutoring
+
 The app uses `/app/chat/page.tsx` as the main workspace where students can:
+
 - create or select conversations
 - send questions to the AI tutor
 - receive streaming responses
 - access learning tools from the learning center
 
 ### Learning tools
+
 The product includes multiple interactive educational modules:
+
 - Smart Review
 - Learning Recommendation
 - Study Plan
